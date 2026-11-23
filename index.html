@@ -1,0 +1,2249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#070b14">
+<title>Delta Multi-Symbol 12/144 WMA, 20/50/200 EMA &amp; VWAP Alert Monitor</title>
+<style>
+  :root {
+    --bg: #070b14;
+    --panel: #0e1626;
+    --panel-2: #131f35;
+    --border: rgba(148, 163, 184, 0.16);
+    --text: #f1f5f9;
+    --muted: #94a3b8;
+    --accent: #38bdf8;
+    --bull: #22c55e;
+    --bear: #ef4444;
+    --warn: #f59e0b;
+    --radius: 14px;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    padding: 14px;
+    background: var(--bg);
+    color: var(--text);
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.45;
+  }
+
+  .app {
+    max-width: 1120px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+  }
+
+  .top-bar {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .title-wrap h1 {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 700;
+  }
+
+  .title-wrap p {
+    margin: 3px 0 0;
+    font-size: 0.84rem;
+    color: var(--muted);
+  }
+
+  .actions-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+
+  button, select {
+    background: var(--panel-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.12s ease, background 0.15s ease, border-color 0.15s ease;
+  }
+
+  button:hover, select:hover {
+    border-color: rgba(56, 189, 248, 0.55);
+    background: #182844;
+  }
+
+  button:active {
+    transform: scale(0.98);
+  }
+
+  button.active {
+    background: rgba(56, 189, 248, 0.18);
+    border-color: var(--accent);
+    color: #e0f2fe;
+  }
+
+  button.danger {
+    background: rgba(239, 68, 68, 0.16);
+    border-color: rgba(239, 68, 68, 0.55);
+    color: #fecaca;
+  }
+
+  .tf-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .tf-btn {
+    padding: 6px 10px;
+    font-size: 0.78rem;
+  }
+
+  .banner {
+    display: none;
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    border: 1px solid transparent;
+  }
+
+  .banner.show {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .banner.bull {
+    background: rgba(34, 197, 94, 0.15);
+    border-color: rgba(34, 197, 94, 0.5);
+    color: #bbf7d0;
+  }
+
+  .banner.bear {
+    background: rgba(239, 68, 68, 0.15);
+    border-color: rgba(239, 68, 68, 0.5);
+    color: #fecaca;
+  }
+
+  .banner.info {
+    background: rgba(56, 189, 248, 0.14);
+    border-color: rgba(56, 189, 248, 0.45);
+    color: #bae6fd;
+  }
+
+  .status-line {
+    font-size: 0.84rem;
+    color: var(--muted);
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .grid-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(165px, 1fr));
+    gap: 10px;
+  }
+
+  .metric {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 12px;
+  }
+
+  .metric .label {
+    font-size: 0.76rem;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .swatch {
+    display: inline-block;
+    width: 12px;
+    height: 4px;
+    border-radius: 2px;
+  }
+
+  .metric .value {
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin-top: 4px;
+  }
+
+  .metric .sub {
+    font-size: 0.76rem;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .bull-text { color: var(--bull); }
+  .bear-text { color: var(--bear); }
+  .warn-text { color: var(--warn); }
+
+  .plan-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.76rem;
+    font-weight: 700;
+    border: 1px solid var(--border);
+    background: var(--panel-2);
+  }
+
+  .plan-badge.long {
+    color: #bbf7d0;
+    border-color: rgba(34, 197, 94, 0.55);
+    background: rgba(34, 197, 94, 0.15);
+  }
+
+  .plan-badge.short {
+    color: #fecaca;
+    border-color: rgba(239, 68, 68, 0.55);
+    background: rgba(239, 68, 68, 0.15);
+  }
+
+  .plan-badge.wait {
+    color: #fde68a;
+    border-color: rgba(245, 158, 11, 0.45);
+    background: rgba(245, 158, 11, 0.14);
+  }
+
+  .chart-header {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .chart-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .ind-toggles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+
+  .ind-pill {
+    padding: 4px 9px;
+    font-size: 0.75rem;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .chart-box {
+    background: #ffffff;
+    border-radius: 12px;
+    border: 1px solid rgba(15, 23, 42, 0.22);
+    overflow: hidden;
+    position: relative;
+  }
+
+  .chart-readout {
+    background: #f8fafc;
+    color: #0f172a;
+    padding: 7px 10px;
+    font-size: 0.76rem;
+    font-weight: 600;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  canvas {
+    display: block;
+    width: 100%;
+    min-width: 260px;
+    height: 360px;
+    min-height: 360px;
+    touch-action: none;
+  }
+
+  .range-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
+    gap: 10px;
+    margin-top: 8px;
+  }
+
+  .atr-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    font-size: 0.8rem;
+  }
+
+  .atr-chip {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 4px 10px;
+    color: var(--text);
+  }
+
+  .mtf-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .mtf-pill {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 6px 10px;
+    font-size: 0.78rem;
+  }
+
+  .history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 240px;
+    overflow-y: auto;
+  }
+
+  .history-item {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 12px;
+    font-size: 0.82rem;
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .guide-box {
+    display: none;
+    margin-top: 10px;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px;
+    font-size: 0.82rem;
+    color: var(--muted);
+  }
+
+  .guide-box.show {
+    display: block;
+  }
+
+  .guide-box ul {
+    margin: 6px 0 0;
+    padding-left: 18px;
+  }
+
+  button:focus-visible, select:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .status-dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px; background:#f59e0b; }
+  .status-dot.live { background:#22c55e; box-shadow:0 0 0 3px rgba(34,197,94,.14); }
+  .status-dot.demo { background:#f59e0b; }
+  .status-dot.offline { background:#ef4444; }
+  .data-warning { display:none; padding:10px 12px; border:1px solid rgba(245,158,11,.5); background:rgba(245,158,11,.12); color:#fde68a; border-radius:11px; font-size:.82rem; }
+  .data-warning.show { display:block; }
+  @media (max-width: 640px) {
+    body { padding: 7px; }
+    .app { gap: 9px; }
+    .card { padding: 10px; border-radius: 11px; }
+    .top-bar { align-items: stretch; }
+    .title-wrap h1 { font-size: 1rem; }
+    .actions-row { display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); width:100%; }
+    .actions-row > * { min-width:0; width:100%; padding:8px 7px; font-size:.76rem; }
+    .tf-group { display:grid; grid-template-columns: repeat(6, minmax(0,1fr)); }
+    .tf-btn { padding:7px 2px; font-size:.72rem; }
+    .grid-metrics, .range-card-grid { grid-template-columns: repeat(2, minmax(0,1fr)); gap:7px; }
+    .metric { padding:8px; min-width:0; }
+    .metric .value { font-size:.94rem; overflow-wrap:anywhere; }
+    .metric .label, .metric .sub { font-size:.7rem; }
+    canvas { height:300px; min-height:300px; }
+    .chart-readout { font-size:.68rem; gap:5px; }
+    .chart-controls button { padding:7px 9px; }
+    .history-item { font-size:.74rem; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Top Controls -->
+  <div class="card">
+    <div class="top-bar">
+      <div class="title-wrap">
+        <h1>Delta Multi-Symbol MA &amp; VWAP Monitor</h1>
+        <p>12/144 WMA · 20/50/200 EMA · VWAP · RSI 14 · ADX 14 · 15m Trend · Wilder ATR · Volume SMA 20</p>
+      </div>
+      <div class="actions-row">
+        <select id="symbolSelect" aria-label="Select Symbol">
+          <option value="BTCUSD">BTCUSD</option>
+          <option value="ETHUSD">ETHUSD</option>
+          <option value="SOLUSD">SOLUSD</option>
+          <option value="XRPUSD">XRPUSD</option>
+        </select>
+        <button type="button" id="installPwaBtn" style="display:none;">Install App</button>
+        <button type="button" id="soundToggleBtn" class="active">Sound ON</button>
+        <button type="button" id="entryExitToggleBtn" class="active">Entry/Exit Alerts ON</button>
+        <select id="volThresholdSelect" aria-label="Entry Volume Threshold" title="Minimum Volume Multiplier for Entry Alerts">
+          <option value="0.8">Vol ≥ 0.8x</option>
+          <option value="1.0" selected>Vol ≥ 1.0x</option>
+          <option value="1.2">Vol ≥ 1.2x</option>
+          <option value="1.5">Vol ≥ 1.5x</option>
+        </select>
+        <button type="button" id="monitorAllBtn" class="active">Monitor all 4 symbols</button>
+        <button type="button" id="pauseAlertsBtn">Stop alerts</button>
+        <button type="button" id="testSoundBtn">Test sound</button>
+        <button type="button" id="testAlertBtn">Test EMA alert</button>
+        <button type="button" id="copyLinkBtn">Copy App Link</button>
+        <button type="button" id="browserGuideBtn">Phone &amp; Browsers</button>
+      </div>
+    </div>
+
+    <!-- Timeframe Switcher (Defaults to 5m) -->
+    <div style="margin-top:12px">
+      <div class="tf-group" role="group" aria-label="Timeframe">
+        <button type="button" class="tf-btn" data-tf="1m">1m</button>
+        <button type="button" class="tf-btn active" data-tf="5m">5m</button>
+        <button type="button" class="tf-btn" data-tf="15m">15m</button>
+        <button type="button" class="tf-btn" data-tf="30m">30m</button>
+        <button type="button" class="tf-btn" data-tf="1h">1h</button>
+        <button type="button" class="tf-btn" data-tf="2h">2h</button>
+        <button type="button" class="tf-btn" data-tf="3h">3h</button>
+        <button type="button" class="tf-btn" data-tf="4h">4h</button>
+        <button type="button" class="tf-btn" data-tf="1d">Day</button>
+        <button type="button" class="tf-btn" data-tf="1w">Week</button>
+        <button type="button" class="tf-btn" data-tf="1M">Month</button>
+      </div>
+    </div>
+
+    <!-- External alert delivery settings -->
+    <div class="card" id="deliverySettings" style="margin-top:12px;border:1px solid rgba(56,189,248,.35);">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+        <strong>Alert delivery — Phone + Telegram + Email</strong>
+        <span class="pill">Alerts only · No auto trading</span>
+      </div>
+      <p style="color:var(--muted);font-size:.82rem;margin:7px 0 12px;">Configure each service below. Credentials are saved only in this browser on this device. Do not share this HTML file after entering your Telegram bot token.</p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;">
+        <div style="background:var(--panel-2);padding:12px;border-radius:10px;">
+          <strong>Phone notification</strong>
+          <p style="font-size:.78rem;color:var(--muted);margin:5px 0 9px;">Browser notification permission. App/browser must remain active; closed-app delivery is not guaranteed.</p>
+          <button type="button" id="enablePhoneNotifyBtn">Enable phone notifications</button>
+          <div id="phoneNotifyStatus" style="font-size:.75rem;color:var(--muted);margin-top:7px;">Permission not checked</div>
+        </div>
+        <div style="background:var(--panel-2);padding:12px;border-radius:10px;">
+          <strong>Telegram</strong>
+          <input id="telegramBotToken" type="password" autocomplete="off" placeholder="Bot token from @BotFather" style="width:100%;margin-top:8px;padding:9px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
+          <input id="telegramChatId" type="text" inputmode="numeric" placeholder="Your Telegram chat ID" style="width:100%;margin-top:7px;padding:9px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
+          <button type="button" id="testTelegramBtn" style="margin-top:8px;">Save &amp; test Telegram</button>
+          <div id="telegramStatus" style="font-size:.75rem;color:var(--muted);margin-top:7px;">Not configured</div>
+        </div>
+        <div style="background:var(--panel-2);padding:12px;border-radius:10px;">
+          <strong>Email (EmailJS)</strong>
+          <input id="emailTo" type="email" autocomplete="email" placeholder="Your email address" style="width:100%;margin-top:8px;padding:9px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
+          <input id="emailServiceId" type="text" placeholder="EmailJS service ID" style="width:100%;margin-top:7px;padding:9px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
+          <input id="emailTemplateId" type="text" placeholder="EmailJS template ID" style="width:100%;margin-top:7px;padding:9px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
+          <input id="emailPublicKey" type="password" autocomplete="off" placeholder="EmailJS public key" style="width:100%;margin-top:7px;padding:9px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
+          <button type="button" id="testEmailBtn" style="margin-top:8px;">Save &amp; test email</button>
+          <div id="emailStatus" style="font-size:.75rem;color:var(--muted);margin-top:7px;">Not configured</div>
+        </div>
+      </div>
+      <p style="font-size:.75rem;color:var(--muted);margin:10px 0 0;">EmailJS template should include: <code>{{to_email}}</code>, <code>{{subject}}</code>, <code>{{alert_message}}</code>, and <code>{{alert_time}}</code>. Telegram requires you to start a chat with your bot first. Browser notifications require HTTPS or localhost.</p>
+    </div>
+
+    <!-- Phone Installation & All-Browser Quick Help -->
+    <div id="browserGuide" class="guide-box">
+      <strong>Phone Installation &amp; All-Browser Guide (Android, iPhone, Chrome, Opera, Firefox, Edge, Safari):</strong>
+      <ul>
+        <li><strong>PWA / Home Screen (HTTPS or localhost):</strong> Open over <code>https://</code> or <code>http://localhost</code> and tap <strong>Install App</strong> (or Chrome/Opera <em>Add to Home screen</em> / iOS Safari <em>Share → Add to Home Screen</em>).</li>
+        <li><strong>Android APK / Local Server:</strong> Wrap <code>index.html</code> in Capacitor/Cordova/WebView for an <code>.apk</code>, or host locally via a local HTTP server app to enable full browser notifications offline.</li>
+        <li><strong>Local <code>file://</code> Mode:</strong> Sound chimes and on-screen alert banners work immediately after any tap even when system notification popups are restricted by the browser.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div id="dataWarning" class="data-warning show" role="status">DEMO DATA — waiting for verified Delta Exchange candles. Do not use displayed sample prices for trading decisions. Alerts remain disabled until Delta candle data is confirmed.</div>
+
+  <!-- Alert Banner -->
+  <div id="alertBanner" class="banner info" role="status" aria-live="polite">
+    <span id="alertBannerText">Ready — monitoring 5m timeframe.</span>
+    <button type="button" id="dismissBannerBtn" style="padding:4px 9px;font-size:0.75rem;">Dismiss</button>
+  </div>
+
+  <!-- Active Alert Trade Plan (Entry, Stop-Loss & Exit Points) -->
+  <div class="card" id="tradePlanCard">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+      <div>
+        <strong>Intraday Trade Plan — Entry, ATR Stop-Loss &amp; Targets</strong>
+        <span style="color:var(--muted);font-size:0.8rem;margin-left:8px;" id="planContextText">EMA + VWAP + RSI/ADX + 15m trend + volume confirmation · Alerts only, no auto-trading</span>
+      </div>
+      <span class="plan-badge wait" id="planSignalBadge">WATCH / NO ACTIVE SIGNAL</span>
+    </div>
+    <div class="grid-metrics">
+      <div class="metric">
+        <div class="label">Entry Zone / Price</div>
+        <div class="value" id="planEntryPrice">—</div>
+        <div class="sub" id="planEntrySub">Waiting for trend + pullback + volume</div>
+      </div>
+      <div class="metric">
+        <div class="label">Stop-Loss (SL)</div>
+        <div class="value bear-text" id="planStopPrice">—</div>
+        <div class="sub" id="planStopPts">Risk points: —</div>
+      </div>
+      <div class="metric">
+        <div class="label">Target 1 (1R)</div>
+        <div class="value bull-text" id="planTp1Price">—</div>
+        <div class="sub" id="planTp1Pts">Reward points: —</div>
+      </div>
+      <div class="metric">
+        <div class="label">Target 2 (2R) / Exit Rule</div>
+        <div class="value bull-text" id="planTp2Price">—</div>
+        <div class="sub" id="planExitRule">Exit if 20 EMA + VWAP flip</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status & Live Metrics -->
+  <div class="card">
+    <div class="status-line" style="margin-bottom:10px;">
+      <span><i id="feedDot" class="status-dot demo" aria-hidden="true"></i><span id="statusText">Connecting to Delta Exchange India…</span></span>
+      <span id="biasText">Bias: —</span>
+    </div>
+
+    <div class="grid-metrics">
+      <div class="metric">
+        <div class="label">Last Price</div>
+        <div class="value" id="mPrice">—</div>
+        <div class="sub" id="mChange">—</div>
+      </div>
+      <div class="metric">
+        <div class="label">ATR 1h (14)</div>
+        <div class="value" id="mAtr1h">—</div>
+        <div class="sub" id="mAtr1hPct">—</div>
+      </div>
+      <div class="metric">
+        <div class="label">ATR 4h (14)</div>
+        <div class="value" id="mAtr4h">—</div>
+        <div class="sub" id="mAtr4hPct">—</div>
+      </div>
+      <div class="metric">
+        <div class="label">Volume / SMA 20</div>
+        <div class="value" id="mVolume">—</div>
+        <div class="sub" id="mVolumeAvg">—</div>
+      </div>
+      <div class="metric">
+        <div class="label">RSI (14)</div>
+        <div class="value" id="mRsi14">—</div>
+        <div class="sub" id="mRsiStatus">Momentum —</div>
+      </div>
+      <div class="metric">
+        <div class="label">ADX (14)</div>
+        <div class="value" id="mAdx14">—</div>
+        <div class="sub" id="mAdxStatus">Trend strength —</div>
+      </div>
+      <div class="metric">
+        <div class="label">15-minute Trend</div>
+        <div class="value" id="m15mTrend">—</div>
+        <div class="sub" id="m15mTrendSub">Waiting for Delta 15m candles</div>
+      </div>
+    </div>
+
+    <!-- High, Low & EMA Points Summary -->
+    <div class="range-card-grid" id="hlEmaPointsBar" style="margin-top:12px;">
+      <div class="metric">
+        <div class="label">Candle High / Low</div>
+        <div class="value" id="mHighLowPts">—</div>
+        <div class="sub" id="mHighLowSpread">—</div>
+      </div>
+      <div class="metric">
+        <div class="label"><span class="swatch" style="background:#00FF00;"></span>20 EMA (Both Sides)</div>
+        <div class="value" id="mEma20Pts">—</div>
+        <div class="sub" id="mEma20PtsSub">—</div>
+      </div>
+      <div class="metric">
+        <div class="label"><span class="swatch" style="background:#006400;"></span>50 EMA (Both Sides)</div>
+        <div class="value" id="mEma50Pts">—</div>
+        <div class="sub" id="mEma50PtsSub">—</div>
+      </div>
+      <div class="metric">
+        <div class="label"><span class="swatch" style="background:#FF00FF;"></span>200 EMA (Both Sides)</div>
+        <div class="value" id="mEma200Pts">—</div>
+        <div class="sub" id="mEma200PtsSub">—</div>
+      </div>
+    </div>
+
+    <!-- 1h Opening Range Breakout (ORB High, Mid, Low) -->
+    <div class="range-card-grid" id="orb1hBar" style="margin-top:10px;">
+      <div class="metric">
+        <div class="label"><span class="swatch" style="background:#f97316;"></span>1h ORB High</div>
+        <div class="value bull-text" id="mOrbHigh">—</div>
+        <div class="sub" id="mOrbHighSub">—</div>
+      </div>
+      <div class="metric">
+        <div class="label"><span class="swatch" style="background:#eab308;"></span>1h ORB Mid</div>
+        <div class="value" id="mOrbMid">—</div>
+        <div class="sub" id="mOrbMidSub">—</div>
+      </div>
+      <div class="metric">
+        <div class="label"><span class="swatch" style="background:#ec4899;"></span>1h ORB Low</div>
+        <div class="value bear-text" id="mOrbLow">—</div>
+        <div class="sub" id="mOrbLowSub">—</div>
+      </div>
+      <div class="metric">
+        <div class="label">1h ORB Status &amp; Width</div>
+        <div class="value" id="mOrbStatus">—</div>
+        <div class="sub" id="mOrbWidthSub">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Candlestick / Heikin Ashi Chart -->
+  <div class="card">
+    <div class="chart-header">
+      <div>
+        <strong id="chartTitle">BTCUSD · 5m Chart</strong>
+        <span style="color:var(--muted);font-size:0.8rem;margin-left:8px;">Blue #0000FF Up / Red #FF0000 Down · White Canvas</span>
+      </div>
+      <div class="chart-controls">
+        <button type="button" id="modeCandleBtn" class="active">Candle</button>
+        <button type="button" id="modeHaBtn">Heikin Ashi</button>
+        <button type="button" id="zoomOutBtn">−</button>
+        <button type="button" id="zoomInBtn">+</button>
+      </div>
+    </div>
+
+    <div class="ind-toggles" id="indicatorToggles">
+      <button type="button" class="ind-pill active" data-ind="wma12"><span class="swatch" style="background:#000000;border:1px solid #94a3b8;"></span>12 WMA</button>
+      <button type="button" class="ind-pill active" data-ind="wma144"><span class="swatch" style="background:#00FFFF;"></span>144 WMA</button>
+      <button type="button" class="ind-pill active" data-ind="ema20"><span class="swatch" style="background:#00FF00;"></span>20 EMA</button>
+      <button type="button" class="ind-pill active" data-ind="ema50"><span class="swatch" style="background:#006400;"></span>50 EMA</button>
+      <button type="button" class="ind-pill active" data-ind="ema200"><span class="swatch" style="background:#FF00FF;"></span>200 EMA</button>
+      <button type="button" class="ind-pill active" data-ind="vwap"><span class="swatch" style="background:#6A6AFF;"></span>VWAP</button>
+      <button type="button" class="ind-pill active" data-ind="orb1h"><span class="swatch" style="background:#f97316;"></span>ORB 1h (H/M/L)</button>
+    </div>
+
+    <div class="chart-box">
+      <div class="chart-readout" id="chartReadout">Hover or touch chart to inspect OHLC, Volume &amp; Indicators</div>
+      <canvas id="priceCanvas"></canvas>
+    </div>
+  </div>
+
+  <!-- Approximate Price Range + ATR 1h & 4h by Timeframe -->
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+      <strong>Approximate Price Range (<span id="rangeTfLabel">5m</span>)</strong>
+      <div class="atr-badges">
+        <span class="atr-chip" id="rangeAtrTf">TF ATR(14): —</span>
+        <span class="atr-chip" id="rangeAtr1h">1h ATR(14): —</span>
+        <span class="atr-chip" id="rangeAtr4h">4h ATR(14): —</span>
+      </div>
+    </div>
+    <div class="range-card-grid">
+      <div class="metric">
+        <div class="label">Est. Low</div>
+        <div class="value bear-text" id="estLow">—</div>
+        <div class="sub" id="estLowDist">—</div>
+      </div>
+      <div class="metric">
+        <div class="label">Est. High</div>
+        <div class="value bull-text" id="estHigh">—</div>
+        <div class="sub" id="estHighDist">—</div>
+      </div>
+      <div class="metric">
+        <div class="label">Projected Width</div>
+        <div class="value" id="estWidth">—</div>
+        <div class="sub" id="estBiasNote">—</div>
+      </div>
+    </div>
+    <div class="mtf-pills" id="mtfRangePills"></div>
+  </div>
+
+  <!-- EMA, WMA & VWAP Prices (Bottom Section) -->
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+      <strong>EMA, WMA &amp; VWAP Prices</strong>
+      <span style="color:var(--muted);font-size:0.8rem;">Live levels &amp; distance from current price</span>
+    </div>
+    <div class="grid-metrics">
+      <div class="metric">
+        <div class="label"><span class="swatch" style="background:#000000;border:1px solid #64748b;"></span>12 WMA</div>
+        <div class="value" id="mWma12">—</div>
+        <div class="sub" id="mWma12Diff">—</div>
+      </div>
+      <div class="metric">
+        <div class="label"><span class="swatch" style="background:#00FFFF;"></span>144 WMA</div>
+        <div class="value" id="mWma144">—</div>
+        <div class="sub" id="mWma144Diff">—</div>
+      </div>
+      <div class="metric">
+        <div class="label"><span class="swatch" style="background:#00FF00;"></span>20 EMA</div>
+        <div class="value" id="mEma20">—</div>
+        <div class="sub" id="mEma20Diff">—</div>
+      </div>
+      <div class="metric">
+        <div class="label"><span class="swatch" style="background:#006400;"></span>50 EMA</div>
+        <div class="value" id="mEma50">—</div>
+        <div class="sub" id="mEma50Diff">—</div>
+      </div>
+      <div class="metric">
+        <div class="label"><span class="swatch" style="background:#FF00FF;"></span>200 EMA</div>
+        <div class="value" id="mEma200">—</div>
+        <div class="sub" id="mEma200Diff">—</div>
+      </div>
+      <div class="metric">
+        <div class="label"><span class="swatch" style="background:#6A6AFF;"></span>VWAP</div>
+        <div class="value" id="mVwap">—</div>
+        <div class="sub" id="mVwapDiff">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Alert History -->
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <strong>Alert History</strong>
+      <button type="button" id="clearHistoryBtn" style="padding:4px 10px;font-size:0.76rem;">Clear</button>
+    </div>
+    <div class="history-list" id="historyList">
+      <div class="history-item"><span style="color:var(--muted);">No crossover alerts triggered yet.</span></div>
+    </div>
+  </div>
+</div>
+
+<audio id="alertAudioFallback" preload="none"></audio>
+
+<script>
+(function () {
+  'use strict';
+
+  const SYMBOLS = ['BTCUSD', 'ETHUSD', 'SOLUSD', 'XRPUSD'];
+  const TF_CONFIG = {
+    '1m':  { label: '1m',    ms: 60 * 1000,               scale: 0.25 },
+    '5m':  { label: '5m',    ms: 5 * 60 * 1000,          scale: 0.55 },
+    '15m': { label: '15m',   ms: 15 * 60 * 1000,         scale: 0.85 },
+    '30m': { label: '30m',   ms: 30 * 60 * 1000,         scale: 0.95 },
+    '1h':  { label: '1h',    ms: 60 * 60 * 1000,         scale: 1.00 },
+    '2h':  { label: '2h',    ms: 2 * 60 * 60 * 1000,     scale: 1.38 },
+    '3h':  { label: '3h',    ms: 3 * 60 * 60 * 1000,     scale: 1.68 },
+    '4h':  { label: '4h',    ms: 4 * 60 * 60 * 1000,     scale: 1.95 },
+    '1d':  { label: 'Day',   ms: 24 * 60 * 60 * 1000,    scale: 3.80 },
+    '1w':  { label: 'Week',  ms: 7 * 24 * 60 * 60 * 1000,scale: 7.50 },
+    '1M':  { label: 'Month', ms: 30 * 24 * 60 * 60 * 1000,scale: 14.0 }
+  };
+
+  const LINE_COLORS = {
+    wma12:  '#000000',
+    wma144: '#00FFFF',
+    ema20:  '#00FF00',
+    ema50:  '#006400',
+    ema200: '#FF00FF',
+    vwap:   '#6A6AFF'
+  };
+
+  const memoryStore = new Map();
+  function storageGet(key) {
+    try {
+      if (window.localStorage) {
+        const v = window.localStorage.getItem(key);
+        if (v !== null) return v;
+      }
+    } catch (_) {}
+    return memoryStore.has(key) ? memoryStore.get(key) : null;
+  }
+  function storageSet(key, val) {
+    try {
+      if (window.localStorage) window.localStorage.setItem(key, String(val));
+    } catch (_) {}
+    memoryStore.set(key, String(val));
+  }
+
+  function setupDynamicManifest() {
+    try {
+      if (!/^https?:$/i.test(window.location.protocol)) return;
+      const manifest = {
+        name: 'Delta Multi-Symbol MA & VWAP Monitor',
+        short_name: 'Delta Monitor',
+        start_url: window.location.href,
+        display: 'standalone',
+        background_color: '#070b14',
+        theme_color: '#070b14',
+        icons: []
+      };
+      const blob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('link');
+      link.rel = 'manifest';
+      link.href = url;
+      document.head.appendChild(link);
+    } catch (_) {}
+  }
+
+  const state = {
+    symbol: SYMBOLS.includes(storageGet('delta_mon_sym')) ? storageGet('delta_mon_sym') : 'BTCUSD',
+    tf: '5m',
+    soundOn: storageGet('delta_mon_sound') !== 'false',
+    entryExitAlertsOn: storageGet('delta_mon_ee_alerts') !== 'false',
+    volThreshold: Number(storageGet('delta_mon_vol_thresh')) || 1.0,
+    monitorAll: storageGet('delta_mon_all') !== 'false',
+    alertsPaused: false,
+    chartMode: 'candle',
+    visibleCandles: Number(storageGet('delta_mon_vcandles')) || 75,
+    showInd: {
+      wma12: true,
+      wma144: true,
+      ema20: true,
+      ema50: true,
+      ema200: true,
+      vwap: true,
+      orb1h: true
+    },
+    candlesByKey: {},
+    lastCrossState: {},
+    lastSignalState: {},
+    history: [],
+    hoverIndex: null,
+    audioCtx: null,
+    deferredInstallPrompt: null,
+    lastDataSource: 'Seed / Simulated',
+    deltaCandleKeys: {},
+    lastEvaluatedCandle: {},
+    alertBaselineReady: {},
+    lastDataSuccess: {},
+    refreshInProgress: false,
+    spotPricesBySymbol: {}
+  };
+
+  function formatPrice(val, sym) {
+    if (!Number.isFinite(val)) return '—';
+    const s = sym || state.symbol;
+    if (s === 'XRPUSD') return val.toFixed(4);
+    if (s === 'SOLUSD') return val.toFixed(2);
+    return val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function formatVol(v) {
+    if (!Number.isFinite(v)) return '—';
+    if (v >= 1e6) return (v / 1e6).toFixed(2) + 'M';
+    if (v >= 1e3) return (v / 1e3).toFixed(2) + 'K';
+    return v.toFixed(1);
+  }
+
+  function getSeriesKey(sym, tf) {
+    return `${sym}__${tf}`;
+  }
+
+  function generateSeedCandles(sym, tf) {
+    const baseMap = {
+      BTCUSD: 57786.60,
+      ETHUSD: 1633.07,
+      SOLUSD: 65.27,
+      XRPUSD: 0.8926
+    };
+    const volBaseMap = {
+      BTCUSD: 420,
+      ETHUSD: 3800,
+      SOLUSD: 45000,
+      XRPUSD: 6800000
+    };
+    const cfg = TF_CONFIG[tf] || TF_CONFIG['1h'];
+    const basePrice = baseMap[sym] || 100;
+    const baseVol = (volBaseMap[sym] || 1000) * Math.sqrt(cfg.scale);
+    const count = 240;
+    const now = Date.now();
+    let price = basePrice * 0.96;
+    const list = [];
+
+    let seed = (sym.charCodeAt(0) * 131 + tf.charCodeAt(0) * 17 + tf.charCodeAt(tf.length - 1) * 29 + count) % 9973;
+    function rand() {
+      seed = (seed * 16807) % 2147483647;
+      return (seed - 1) / 2147483646;
+    }
+
+    for (let i = 0; i < count; i++) {
+      const t = now - (count - 1 - i) * cfg.ms;
+      const wave = Math.sin(i / 14) * 0.004 + Math.cos(i / 33) * 0.003;
+      const pctMove = (rand() - 0.485) * 0.011 * Math.sqrt(cfg.scale) + wave * 0.25;
+      const open = price;
+      const close = Math.max(basePrice * 0.1, open * (1 + pctMove));
+      const wickFactor = (0.002 + rand() * 0.008) * Math.sqrt(cfg.scale);
+      const high = Math.max(open, close) * (1 + wickFactor);
+      const low = Math.max(basePrice * 0.05, Math.min(open, close) * (1 - wickFactor));
+      const vol = Math.max(10, baseVol * (0.45 + rand() * 1.35) * (1 + Math.abs(pctMove) * 25));
+
+      list.push({ t, o: open, h: high, l: low, c: close, v: vol });
+      price = close;
+    }
+
+    const last = list[list.length - 1];
+    const ratio = basePrice / last.c;
+    for (let i = 0; i < list.length; i++) {
+      list[i].o *= ratio;
+      list[i].h *= ratio;
+      list[i].l *= ratio;
+      list[i].c *= ratio;
+    }
+    return list;
+  }
+
+  function ensureSeries(sym, tf) {
+    const key = getSeriesKey(sym, tf);
+    if (!state.candlesByKey[key] || state.candlesByKey[key].length < 20) {
+      state.candlesByKey[key] = generateSeedCandles(sym, tf);
+    }
+    return state.candlesByKey[key];
+  }
+
+  function aggregateCandles(candles, targetMs) {
+    if (!Array.isArray(candles) || candles.length === 0) return [];
+    const buckets = new Map();
+    for (const c of candles) {
+      const bucketStart = Math.floor(c.t / targetMs) * targetMs;
+      let b = buckets.get(bucketStart);
+      if (!b) {
+        b = { t: bucketStart, o: c.o, h: c.h, l: c.l, c: c.c, v: c.v || 0 };
+        buckets.set(bucketStart, b);
+      } else {
+        b.h = Math.max(b.h, c.h);
+        b.l = Math.min(b.l, c.l);
+        b.c = c.c;
+        b.v += c.v || 0;
+      }
+    }
+    return Array.from(buckets.values()).sort((a, b) => a.t - b.t);
+  }
+
+  function calcATR(candles, period = 14) {
+    if (!Array.isArray(candles) || candles.length <= period) return 0;
+    let atr = 0;
+    for (let i = 1; i <= period; i++) {
+      const c = candles[i], prevC = candles[i - 1].c;
+      atr += Math.max(c.h - c.l, Math.abs(c.h - prevC), Math.abs(c.l - prevC));
+    }
+    atr /= period;
+    // Wilder's smoothing, the standard ATR calculation.
+    for (let i = period + 1; i < candles.length; i++) {
+      const c = candles[i], prevC = candles[i - 1].c;
+      const tr = Math.max(c.h - c.l, Math.abs(c.h - prevC), Math.abs(c.l - prevC));
+      atr = ((atr * (period - 1)) + tr) / period;
+    }
+    return Number.isFinite(atr) ? atr : 0;
+  }
+
+  function getAnchorATRs(sym, activeTf, activeCandles) {
+    let atr1h = 0;
+    let atr4h = 0;
+
+    if (activeTf === '1h') atr1h = calcATR(activeCandles, 14);
+    if (activeTf === '4h') atr4h = calcATR(activeCandles, 14);
+
+    const h1Series = state.deltaCandleKeys[getSeriesKey(sym, '1h')] === true ? ensureSeries(sym, '1h') : [];
+    const h4Series = state.deltaCandleKeys[getSeriesKey(sym, '4h')] === true ? ensureSeries(sym, '4h') : [];
+
+    if (!atr1h) {
+      const cfg = TF_CONFIG[activeTf] || TF_CONFIG['5m'];
+      if (cfg.ms < TF_CONFIG['1h'].ms && activeCandles.length >= 28) {
+        const agg1h = aggregateCandles(activeCandles, TF_CONFIG['1h'].ms);
+        atr1h = agg1h.length >= 6 ? calcATR(agg1h, Math.min(14, agg1h.length - 1)) : (h1Series.length ? calcATR(h1Series, 14) : 0);
+      } else {
+        atr1h = h1Series.length ? calcATR(h1Series, 14) : 0;
+      }
+    }
+
+    if (!atr4h) {
+      const cfg = TF_CONFIG[activeTf] || TF_CONFIG['5m'];
+      if (cfg.ms < TF_CONFIG['4h'].ms && activeCandles.length >= 56) {
+        const agg4h = aggregateCandles(activeCandles, TF_CONFIG['4h'].ms);
+        atr4h = agg4h.length >= 6 ? calcATR(agg4h, Math.min(14, agg4h.length - 1)) : (h4Series.length ? calcATR(h4Series, 14) : 0);
+      } else {
+        atr4h = h4Series.length ? calcATR(h4Series, 14) : 0;
+      }
+    }
+
+    return {
+      tfAtr: calcATR(activeCandles, 14),
+      atr1h,
+      atr4h
+    };
+  }
+
+  function toHeikinAshi(candles) {
+    if (!Array.isArray(candles) || candles.length === 0) return [];
+    const ha = [];
+    for (let i = 0; i < candles.length; i++) {
+      const c = candles[i];
+      const haClose = (c.o + c.h + c.l + c.c) / 4;
+      const haOpen = i === 0 ? (c.o + c.c) / 2 : (ha[i - 1].o + ha[i - 1].c) / 2;
+      const haHigh = Math.max(c.h, haOpen, haClose);
+      const haLow = Math.min(c.l, haOpen, haClose);
+      ha.push({ t: c.t, o: haOpen, h: haHigh, l: haLow, c: haClose, v: c.v });
+    }
+    return ha;
+  }
+
+  function calcWMA(values, period) {
+    const out = new Array(values.length).fill(null);
+    if (values.length < period) return out;
+    const denom = (period * (period + 1)) / 2;
+    for (let i = period - 1; i < values.length; i++) {
+      let weightedSum = 0;
+      for (let k = 0; k < period; k++) {
+        weightedSum += values[i - k] * (period - k);
+      }
+      out[i] = weightedSum / denom;
+    }
+    return out;
+  }
+
+  function calcEMA(values, period) {
+    const out = new Array(values.length).fill(null);
+    if (values.length < period) return out;
+    const mult = 2 / (period + 1);
+    let sum = 0;
+    for (let i = 0; i < period; i++) sum += values[i];
+    let ema = sum / period;
+    out[period - 1] = ema;
+    for (let i = period; i < values.length; i++) {
+      ema = (values[i] - ema) * mult + ema;
+      out[i] = ema;
+    }
+    return out;
+  }
+
+  function calcVWAP(candles) {
+    const out = new Array(candles.length).fill(null);
+    let cumPV = 0;
+    let cumV = 0;
+    let currentDay = null;
+
+    for (let i = 0; i < candles.length; i++) {
+      const d = new Date(candles[i].t);
+      const dayKey = `${d.getUTCFullYear()}-${d.getUTCMonth()}-${d.getUTCDate()}`;
+      if (dayKey !== currentDay) {
+        currentDay = dayKey;
+        cumPV = 0;
+        cumV = 0;
+      }
+      const typical = (candles[i].h + candles[i].l + candles[i].c) / 3;
+      const vol = Math.max(0, candles[i].v || 0);
+      cumPV += typical * vol;
+      cumV += vol;
+      out[i] = cumV > 0 ? cumPV / cumV : typical;
+    }
+    return out;
+  }
+
+  function calcRSI(values, period = 14) {
+    const out = new Array(values.length).fill(null);
+    if (values.length <= period) return out;
+    let gain = 0, loss = 0;
+    for (let i = 1; i <= period; i++) {
+      const change = values[i] - values[i - 1];
+      if (change > 0) gain += change; else loss -= change;
+    }
+    let avgGain = gain / period;
+    let avgLoss = loss / period;
+    const value = () => avgLoss === 0 ? (avgGain === 0 ? 50 : 100) : 100 - (100 / (1 + avgGain / avgLoss));
+    out[period] = value();
+    for (let i = period + 1; i < values.length; i++) {
+      const change = values[i] - values[i - 1];
+      avgGain = (avgGain * (period - 1) + Math.max(change, 0)) / period;
+      avgLoss = (avgLoss * (period - 1) + Math.max(-change, 0)) / period;
+      out[i] = value();
+    }
+    return out;
+  }
+
+  function calcADX(candles, period = 14) {
+    const n = candles.length;
+    const adx = new Array(n).fill(null);
+    const plusDI = new Array(n).fill(null);
+    const minusDI = new Array(n).fill(null);
+    if (n <= period * 2) return { adx, plusDI, minusDI };
+    const tr = new Array(n).fill(0), plusDM = new Array(n).fill(0), minusDM = new Array(n).fill(0);
+    for (let i = 1; i < n; i++) {
+      const up = candles[i].h - candles[i - 1].h;
+      const down = candles[i - 1].l - candles[i].l;
+      tr[i] = Math.max(candles[i].h - candles[i].l, Math.abs(candles[i].h - candles[i - 1].c), Math.abs(candles[i].l - candles[i - 1].c));
+      plusDM[i] = up > down && up > 0 ? up : 0;
+      minusDM[i] = down > up && down > 0 ? down : 0;
+    }
+    let trSum = 0, plusSum = 0, minusSum = 0;
+    for (let i = 1; i <= period; i++) { trSum += tr[i]; plusSum += plusDM[i]; minusSum += minusDM[i]; }
+    const dx = new Array(n).fill(null);
+    for (let i = period; i < n; i++) {
+      if (i > period) {
+        trSum = trSum - trSum / period + tr[i];
+        plusSum = plusSum - plusSum / period + plusDM[i];
+        minusSum = minusSum - minusSum / period + minusDM[i];
+      }
+      const p = trSum > 0 ? 100 * plusSum / trSum : 0;
+      const m = trSum > 0 ? 100 * minusSum / trSum : 0;
+      plusDI[i] = p; minusDI[i] = m;
+      dx[i] = (p + m) > 0 ? 100 * Math.abs(p - m) / (p + m) : 0;
+    }
+    const firstAdxIndex = period * 2 - 1;
+    let dxSum = 0;
+    for (let i = period; i <= firstAdxIndex; i++) dxSum += dx[i] || 0;
+    adx[firstAdxIndex] = dxSum / period;
+    for (let i = firstAdxIndex + 1; i < n; i++) adx[i] = ((adx[i - 1] * (period - 1)) + (dx[i] || 0)) / period;
+    return { adx, plusDI, minusDI };
+  }
+
+  function computeIndicators(candles) {
+    const closes = candles.map(c => c.c);
+    const dmi = calcADX(candles, 14);
+    return {
+      wma12:  calcWMA(closes, 12),
+      wma144: calcWMA(closes, 144),
+      ema20:  calcEMA(closes, 20),
+      ema50:  calcEMA(closes, 50),
+      ema200: calcEMA(closes, 200),
+      vwap:   calcVWAP(candles),
+      rsi14:  calcRSI(closes, 14),
+      adx14:  dmi.adx,
+      plusDI14: dmi.plusDI,
+      minusDI14: dmi.minusDI
+    };
+  }
+
+  function getClosed15mTrend(sym) {
+    const key = getSeriesKey(sym, '15m');
+    const candles = ensureSeries(sym, '15m');
+    if (state.deltaCandleKeys[key] !== true || candles.length < 55) return { direction: 'UNAVAILABLE', label: '15m data unavailable' };
+    const tfMs = TF_CONFIG['15m'].ms;
+    let i = candles.length - 1;
+    while (i >= 0 && candles[i].t + tfMs > Date.now()) i--;
+    if (i < 50) return { direction: 'UNAVAILABLE', label: 'Waiting for closed 15m candle' };
+    const closed = candles.slice(0, i + 1);
+    const mtf = computeIndicators(closed);
+    const price = closed[i].c, e20 = mtf.ema20[i], e50 = mtf.ema50[i];
+    if (![e20, e50].every(Number.isFinite)) return { direction: 'UNAVAILABLE', label: '15m EMA warming up' };
+    if (price > e20 && e20 > e50) return { direction: 'BULLISH', label: 'Bullish · 15m 20 EMA > 50 EMA', price, e20, e50 };
+    if (price < e20 && e20 < e50) return { direction: 'BEARISH', label: 'Bearish · 15m 20 EMA < 50 EMA', price, e20, e50 };
+    return { direction: 'NEUTRAL', label: 'Neutral · 15m EMAs mixed', price, e20, e50 };
+  }
+
+  function calc1hORB(sym, activeTf, activeCandles) {
+    const h1Key = getSeriesKey(sym, '1h');
+    const hourlyIsVerified = activeTf === '1h' ? state.deltaCandleKeys[getSeriesKey(sym, activeTf)] === true : state.deltaCandleKeys[h1Key] === true;
+    if (!hourlyIsVerified) return null;
+    const source = activeTf === '1h' ? activeCandles : ensureSeries(sym, '1h');
+    if (!Array.isArray(source) || source.length === 0) return null;
+
+    const latest = source[source.length - 1];
+    const d = new Date(latest.t);
+    const dayStartUtc = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 0, 0, 0, 0);
+
+    // The opening range is valid only after the first UTC hourly candle has closed.
+    const orbBar = source.find(c => c.t >= dayStartUtc && c.t < dayStartUtc + 3600 * 1000 && c.t + 3600 * 1000 <= Date.now());
+    if (!orbBar) return null;
+
+    let high = Number(orbBar.h);
+    let low = Number(orbBar.l);
+
+    if (Array.isArray(activeCandles) && activeCandles.length > 0 && Number.isFinite(orbBar.t)) {
+      const winStart = orbBar.t;
+      const winEnd = winStart + 3600 * 1000;
+      const subBars = activeCandles.filter(c => c.t >= winStart && c.t < winEnd);
+      for (const sb of subBars) {
+        if (Number.isFinite(sb.h) && sb.h > high) high = sb.h;
+        if (Number.isFinite(sb.l) && sb.l < low) low = sb.l;
+      }
+    }
+
+    if (!Number.isFinite(high) || !Number.isFinite(low)) return null;
+    if (high <= low) {
+      const pad = Math.max(high * 0.001, 1e-6);
+      high += pad;
+      low -= pad;
+    }
+
+    const mid = (high + low) / 2;
+    const width = high - low;
+    return { high, mid, low, width, startTime: orbBar.t };
+  }
+
+  function playAlertTone(type = 'info') {
+    if (!state.soundOn) return;
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (AudioCtx) {
+        if (!state.audioCtx) state.audioCtx = new AudioCtx();
+        if (state.audioCtx.state === 'suspended') state.audioCtx.resume();
+        const now = state.audioCtx.currentTime;
+        const freqs = type === 'bull' ? [523.25, 659.25, 783.99] : type === 'bear' ? [587.33, 440, 349.23] : [493.88, 659.25];
+        freqs.forEach((f, idx) => {
+          const osc = state.audioCtx.createOscillator();
+          const gain = state.audioCtx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(f, now + idx * 0.09);
+          gain.gain.setValueAtTime(0.001, now + idx * 0.09);
+          gain.gain.exponentialRampToValueAtTime(0.11, now + idx * 0.09 + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.09 + 0.18);
+          osc.connect(gain);
+          gain.connect(state.audioCtx.destination);
+          osc.start(now + idx * 0.09);
+          osc.stop(now + idx * 0.09 + 0.19);
+        });
+      }
+    } catch (_) {}
+    try {
+      if (navigator.vibrate) navigator.vibrate([120, 60, 120]);
+    } catch (_) {}
+  }
+
+  function showBanner(msg, type = 'info') {
+    const banner = document.getElementById('alertBanner');
+    const txt = document.getElementById('alertBannerText');
+    if (!banner || !txt) return;
+    banner.className = `banner show ${type}`;
+    txt.textContent = msg;
+  }
+
+  function addAlertHistory(msg, type = 'info') {
+    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    state.history.unshift({ time: timeStr, msg, type });
+    if (state.history.length > 40) state.history.pop();
+    const listEl = document.getElementById('historyList');
+    if (!listEl) return;
+    listEl.replaceChildren();
+    state.history.forEach(h => {
+      const item = document.createElement('div'); item.className = 'history-item';
+      const message = document.createElement('span');
+      message.className = h.type === 'bull' ? 'bull-text' : h.type === 'bear' ? 'bear-text' : '';
+      message.textContent = h.msg;
+      const time = document.createElement('span'); time.style.cssText = 'color:var(--muted);white-space:nowrap;'; time.textContent = h.time;
+      item.append(message, time); listEl.appendChild(item);
+    });
+  }
+
+  const deliveryKeys = ['telegramBotToken','telegramChatId','emailTo','emailServiceId','emailTemplateId','emailPublicKey'];
+  function loadDeliverySettings() {
+    deliveryKeys.forEach(id => { const el=document.getElementById(id); if(el) el.value=storageGet('delta_'+id)||''; });
+    updatePhoneNotifyStatus();
+    document.getElementById('telegramStatus').textContent = storageGet('delta_telegramBotToken') && storageGet('delta_telegramChatId') ? 'Saved in this browser' : 'Not configured';
+    document.getElementById('emailStatus').textContent = storageGet('delta_emailTo') && storageGet('delta_emailServiceId') && storageGet('delta_emailTemplateId') && storageGet('delta_emailPublicKey') ? 'Saved in this browser' : 'Not configured';
+  }
+  function saveDeliverySettings() {
+    deliveryKeys.forEach(id => storageSet('delta_'+id, document.getElementById(id).value.trim()));
+  }
+  function updatePhoneNotifyStatus() {
+    const el=document.getElementById('phoneNotifyStatus');
+    if (!('Notification' in window)) el.textContent='This browser does not support notifications';
+    else el.textContent='Permission: '+Notification.permission;
+  }
+  async function sendPhoneNotification(msg, type) {
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    try { new Notification('Delta Exchange alert', { body: msg, tag: 'delta-'+type+'-'+Date.now(), renotify: true }); } catch (_) {}
+  }
+  async function sendTelegramAlert(msg) {
+    const token=storageGet('delta_telegramBotToken'), chat=storageGet('delta_telegramChatId');
+    if (!token || !chat) return;
+    const r=await fetch('https://api.telegram.org/bot'+encodeURIComponent(token)+'/sendMessage', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chat_id:chat,text:'📊 Delta Exchange alert\n'+msg+'\n'+new Date().toLocaleString()})});
+    const j=await r.json(); if(!r.ok || !j.ok) throw new Error(j.description || 'Telegram send failed');
+  }
+  async function sendEmailAlert(msg, type) {
+    const to=storageGet('delta_emailTo'), service=storageGet('delta_emailServiceId'), template=storageGet('delta_emailTemplateId'), key=storageGet('delta_emailPublicKey');
+    if (!to || !service || !template || !key) return;
+    const r=await fetch('https://api.emailjs.com/api/v1.0/email/send', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({service_id:service,template_id:template,user_id:key,template_params:{to_email:to,subject:'Delta BTCUSD '+type.toUpperCase()+' alert',alert_message:msg,alert_time:new Date().toLocaleString()}})});
+    if(!r.ok) throw new Error('EmailJS send failed ('+r.status+')');
+  }
+  function sendExternalAlerts(msg, type) {
+    sendPhoneNotification(msg,type);
+    if (storageGet('delta_telegramBotToken') && storageGet('delta_telegramChatId')) sendTelegramAlert(msg).then(()=>{document.getElementById('telegramStatus').textContent='Last alert sent';}).catch(e=>{document.getElementById('telegramStatus').textContent='Send error: '+e.message;});
+    if (storageGet('delta_emailTo') && storageGet('delta_emailServiceId') && storageGet('delta_emailTemplateId') && storageGet('delta_emailPublicKey')) sendEmailAlert(msg,type).then(()=>{document.getElementById('emailStatus').textContent='Last alert sent';}).catch(e=>{document.getElementById('emailStatus').textContent='Send error: '+e.message;});
+  }
+  function triggerAlert(msg, type = 'info') {
+    if (state.alertsPaused) return;
+    showBanner(msg, type);
+    addAlertHistory(msg, type);
+    playAlertTone(type);
+    sendExternalAlerts(msg, type);
+  }
+
+  function evaluateCrossoversAndSignals(sym, tf, candles, ind, atrInfo, orb) {
+    const key = getSeriesKey(sym, tf);
+    // Never generate trading alerts from seed data, Binance fallback, or a spot price
+    // grafted onto another venue's candles. Delta candles are required.
+    if (!state.deltaCandleKeys[key] || !Array.isArray(candles) || candles.length < 3) return;
+    const tfMs = (TF_CONFIG[tf] || TF_CONFIG['5m']).ms;
+    const now = Date.now();
+    let i = candles.length - 1;
+    while (i >= 0 && candles[i].t + tfMs > now) i--;
+    if (i < 2) return;
+    const candleTime = candles[i].t;
+    const evalKey = `${sym}_${tf}`;
+    if (state.lastEvaluatedCandle[evalKey] === candleTime) return;
+    state.lastEvaluatedCandle[evalKey] = candleTime;
+
+    const prev = candles[i - 1].c;
+    const curr = candles[i].c;
+    const checks = [
+      { key: 'wma12', label: '12 WMA', val: ind.wma12[i], prevVal: ind.wma12[i - 1] },
+      { key: 'wma144', label: '144 WMA', val: ind.wma144[i], prevVal: ind.wma144[i - 1] },
+      { key: 'ema20', label: '20 EMA', val: ind.ema20[i], prevVal: ind.ema20[i - 1] },
+      { key: 'ema50', label: '50 EMA', val: ind.ema50[i], prevVal: ind.ema50[i - 1] },
+      { key: 'ema200', label: '200 EMA', val: ind.ema200[i], prevVal: ind.ema200[i - 1] },
+      { key: 'vwap', label: 'VWAP', val: ind.vwap[i], prevVal: ind.vwap[i - 1] }
+    ];
+    if (orb) checks.push(
+      { key: 'orbH', label: '1h ORB High', val: orb.high, prevVal: orb.high },
+      { key: 'orbM', label: '1h ORB Mid', val: orb.mid, prevVal: orb.mid },
+      { key: 'orbL', label: '1h ORB Low', val: orb.low, prevVal: orb.low }
+    );
+
+    // First closed candle after connecting establishes a baseline; it must not
+    // create a historical alert just because the app was opened mid-trend.
+    const isBaseline = !state.alertBaselineReady?.[evalKey];
+    state.alertBaselineReady = state.alertBaselineReady || {};
+    for (const c of checks) {
+      if (!Number.isFinite(c.val)) continue;
+      const crossedUp = Number.isFinite(c.prevVal) && candles[i - 1].c <= c.prevVal && curr > c.val;
+      const crossedDown = Number.isFinite(c.prevVal) && candles[i - 1].c >= c.prevVal && curr < c.val;
+      if (!isBaseline && (crossedUp || crossedDown)) {
+        const side = crossedUp ? 'ABOVE' : 'BELOW';
+        triggerAlert(`${sym} (${tf}) candle closed ${side} ${c.label} @ ${formatPrice(curr, sym)}`, crossedUp ? 'bull' : 'bear');
+      }
+    }
+    state.alertBaselineReady[evalKey] = true;
+
+    if (!state.entryExitAlertsOn) return;
+    const e20 = ind.ema20[i], e50 = ind.ema50[i], e200 = ind.ema200[i], vw = ind.vwap[i];
+    const rsi = ind.rsi14[i], adx = ind.adx14[i];
+    if (![e20, e50, vw].every(Number.isFinite)) return;
+    const recentVols = candles.slice(Math.max(0, i - 20), i).map(x => x.v || 0);
+    const avgVol = recentVols.length ? recentVols.reduce((a, b) => a + b, 0) / recentVols.length : 0;
+    const volRatio = avgVol > 0 ? (candles[i].v || 0) / avgVol : 0;
+    const atr = atrInfo.tfAtr || atrInfo.atr1h || Math.abs(curr - e50);
+    const mtfTrend = getClosed15mTrend(sym);
+    const bullTrend = curr > e20 && e20 > e50 && (!Number.isFinite(e200) || e50 >= e200) && curr > vw;
+    const bearTrend = curr < e20 && e20 < e50 && (!Number.isFinite(e200) || e50 <= e200) && curr < vw;
+    const trendStrengthOk = Number.isFinite(adx) && adx >= 20;
+    const longFilters = Number.isFinite(rsi) && rsi > 50 && trendStrengthOk && mtfTrend.direction === 'BULLISH';
+    const shortFilters = Number.isFinite(rsi) && rsi < 50 && trendStrengthOk && mtfTrend.direction === 'BEARISH';
+    let sigType = 'NONE';
+    if (bullTrend && longFilters && volRatio >= state.volThreshold && candles[i].c >= candles[i].o) sigType = 'LONG_ENTRY';
+    else if (bearTrend && shortFilters && volRatio >= state.volThreshold && candles[i].c < candles[i].o) sigType = 'SHORT_ENTRY';
+    else if (prev >= ind.ema20[i - 1] && curr < e20 && curr < vw) sigType = 'LONG_EXIT';
+    else if (prev <= ind.ema20[i - 1] && curr > e20 && curr > vw) sigType = 'SHORT_EXIT';
+
+    const sigKey = `${sym}_${tf}_signal`;
+    const lastSig = state.lastSignalState[sigKey] || 'NONE';
+    if (!isBaseline && sigType !== 'NONE' && sigType !== lastSig) {
+      if (sigType === 'LONG_ENTRY') {
+        triggerAlert(`LONG ENTRY ${sym} (${tf}) @ ${formatPrice(curr, sym)} | RSI ${rsi.toFixed(1)} | ADX ${adx.toFixed(1)} | 15m BULL | SL ${formatPrice(curr - atr * 1.5, sym)} | TP1 ${formatPrice(curr + atr * 1.5, sym)} | TP2 ${formatPrice(curr + atr * 3, sym)} | Vol ${volRatio.toFixed(2)}x`, 'bull');
+      } else if (sigType === 'SHORT_ENTRY') {
+        triggerAlert(`SHORT ENTRY ${sym} (${tf}) @ ${formatPrice(curr, sym)} | RSI ${rsi.toFixed(1)} | ADX ${adx.toFixed(1)} | 15m BEAR | SL ${formatPrice(curr + atr * 1.5, sym)} | TP1 ${formatPrice(curr - atr * 1.5, sym)} | TP2 ${formatPrice(curr - atr * 3, sym)} | Vol ${volRatio.toFixed(2)}x`, 'bear');
+      } else if (sigType === 'LONG_EXIT') {
+        triggerAlert(`EXIT LONG ${sym} (${tf}) @ ${formatPrice(curr, sym)} — candle closed below 20 EMA & VWAP`, 'bear');
+      } else if (sigType === 'SHORT_EXIT') {
+        triggerAlert(`EXIT SHORT ${sym} (${tf}) @ ${formatPrice(curr, sym)} — candle closed above 20 EMA & VWAP`, 'bull');
+      }
+    }
+    state.lastSignalState[sigKey] = sigType;
+  }
+
+  function updateTradePlan(candles, ind, atrInfo, mtfTrend) {
+    const i = candles.length - 1;
+    const curr = candles[i].c;
+    const e20 = ind.ema20[i];
+    const e50 = ind.ema50[i];
+    const e200 = ind.ema200[i];
+    const vw = ind.vwap[i];
+    const w12 = ind.wma12[i];
+    const rsi = ind.rsi14[i];
+    const adx = ind.adx14[i];
+    const atr = atrInfo.tfAtr || atrInfo.atr1h || 0;
+
+    const recentVols = candles.slice(-21, -1).map(x => x.v || 0);
+    const avgVol = recentVols.length ? recentVols.reduce((a, b) => a + b, 0) / recentVols.length : 1;
+    const volRatio = avgVol > 0 ? (candles[i].v || 0) / avgVol : 1;
+
+    const badge = document.getElementById('planSignalBadge');
+    const entryEl = document.getElementById('planEntryPrice');
+    const entrySub = document.getElementById('planEntrySub');
+    const stopEl = document.getElementById('planStopPrice');
+    const stopPts = document.getElementById('planStopPts');
+    const tp1El = document.getElementById('planTp1Price');
+    const tp1Pts = document.getElementById('planTp1Pts');
+    const tp2El = document.getElementById('planTp2Price');
+    const exitRule = document.getElementById('planExitRule');
+
+    const bullAligned = Number.isFinite(e20) && Number.isFinite(e50) && curr > e20 && e20 > e50 && (!Number.isFinite(vw) || curr > vw);
+    const bearAligned = Number.isFinite(e20) && Number.isFinite(e50) && curr < e20 && e20 < e50 && (!Number.isFinite(vw) || curr < vw);
+    const longReady = bullAligned && volRatio >= state.volThreshold && Number.isFinite(rsi) && rsi > 50 && Number.isFinite(adx) && adx >= 20 && mtfTrend.direction === 'BULLISH';
+    const shortReady = bearAligned && volRatio >= state.volThreshold && Number.isFinite(rsi) && rsi < 50 && Number.isFinite(adx) && adx >= 20 && mtfTrend.direction === 'BEARISH';
+    const riskDistance = atr * 1.5;
+    if (!Number.isFinite(atr) || atr <= 0) {
+      badge.textContent = 'WAIT — ATR DATA UNAVAILABLE'; badge.className = 'plan-badge wait';
+      entryEl.textContent = '—'; entrySub.textContent = 'Waiting for sufficient verified candles';
+      stopEl.textContent = '—'; stopPts.textContent = 'Risk not calculated';
+      tp1El.textContent = '—'; tp1Pts.textContent = 'Target not calculated';
+      tp2El.textContent = '—'; exitRule.textContent = 'No risk plan until ATR is available';
+      return;
+    }
+
+    if (bullAligned) {
+      const zoneLow = Math.min(w12 || e20, e20);
+      const sl = curr - riskDistance;
+      const tp1 = curr + riskDistance;
+      const tp2 = curr + riskDistance * 2;
+      const risk = riskDistance;
+
+      badge.textContent = longReady ? 'LONG SETUP FILTERS CONFIRMED' : 'BULLISH TREND — WAIT FOR FILTERS';
+      badge.className = 'plan-badge long';
+      entryEl.textContent = `${formatPrice(zoneLow, state.symbol)} – ${formatPrice(curr, state.symbol)}`;
+      entrySub.textContent = `RSI ${Number.isFinite(rsi) ? rsi.toFixed(1) : '—'} · ADX ${Number.isFinite(adx) ? adx.toFixed(1) : '—'} · 15m ${mtfTrend.direction} · Vol ${volRatio.toFixed(2)}x`;
+      stopEl.textContent = formatPrice(sl, state.symbol);
+      stopPts.textContent = `Risk: -${formatPrice(risk, state.symbol)} (-${((risk / curr) * 100).toFixed(2)}%)`;
+      tp1El.textContent = formatPrice(tp1, state.symbol);
+      tp1Pts.textContent = `Reward: +${formatPrice(tp1 - curr, state.symbol)} (+1R · 1.5x active TF ATR)`;
+      tp2El.textContent = formatPrice(tp2, state.symbol);
+      exitRule.textContent = `TP2 +2R · Exit if candle closes below ${formatPrice(e20, state.symbol)} (20 EMA) & VWAP`;
+    } else if (bearAligned) {
+      const zoneHigh = Math.max(w12 || e20, e20);
+      const sl = curr + riskDistance;
+      const tp1 = curr - riskDistance;
+      const tp2 = curr - riskDistance * 2;
+      const risk = riskDistance;
+
+      badge.textContent = shortReady ? 'SHORT SETUP FILTERS CONFIRMED' : 'BEARISH TREND — WAIT FOR FILTERS';
+      badge.className = 'plan-badge short';
+      entryEl.textContent = `${formatPrice(curr, state.symbol)} – ${formatPrice(zoneHigh, state.symbol)}`;
+      entrySub.textContent = `RSI ${Number.isFinite(rsi) ? rsi.toFixed(1) : '—'} · ADX ${Number.isFinite(adx) ? adx.toFixed(1) : '—'} · 15m ${mtfTrend.direction} · Vol ${volRatio.toFixed(2)}x`;
+      stopEl.textContent = formatPrice(sl, state.symbol);
+      stopPts.textContent = `Risk: +${formatPrice(risk, state.symbol)} (+${((risk / curr) * 100).toFixed(2)}%)`;
+      tp1El.textContent = formatPrice(tp1, state.symbol);
+      tp1Pts.textContent = `Reward: -${formatPrice(curr - tp1, state.symbol)} (+1R · 1.5x active TF ATR)`;
+      tp2El.textContent = formatPrice(tp2, state.symbol);
+      exitRule.textContent = `TP2 +2R · Exit if candle closes above ${formatPrice(e20, state.symbol)} (20 EMA) & VWAP`;
+    } else {
+      badge.textContent = 'NEUTRAL / CHOP — WAIT FOR ALIGNMENT';
+      badge.className = 'plan-badge wait';
+      entryEl.textContent = formatPrice(curr, state.symbol);
+      entrySub.textContent = `Wait for RSI/ADX + 15m confirmation · ${mtfTrend.label}`;
+      stopEl.textContent = Number.isFinite(e50) ? formatPrice(e50, state.symbol) : '—';
+      stopPts.textContent = `Risk model: 1.5x active TF ATR · ADX ≥ 20`;
+      tp1El.textContent = '—';
+      tp1Pts.textContent = 'Reward points: —';
+      tp2El.textContent = '—';
+      exitRule.textContent = `200 EMA: ${Number.isFinite(e200) ? formatPrice(e200, state.symbol) : '—'}`;
+    }
+  }
+
+  function renderOrbMetrics(candles, orb) {
+    const last = candles && candles.length ? candles[candles.length - 1] : null;
+    const price = last ? last.c : 0;
+
+    if (orb && price > 0) {
+      const dHigh = price - orb.high;
+      const dMid = price - orb.mid;
+      const dLow = price - orb.low;
+
+      document.getElementById('mOrbHigh').textContent = formatPrice(orb.high, state.symbol);
+      document.getElementById('mOrbHighSub').textContent =
+        `${dHigh >= 0 ? 'Above +' : 'Below '}${formatPrice(Math.abs(dHigh), state.symbol)} (${((dHigh / orb.high) * 100).toFixed(2)}%)`;
+
+      document.getElementById('mOrbMid').textContent = formatPrice(orb.mid, state.symbol);
+      document.getElementById('mOrbMidSub').textContent =
+        `${dMid >= 0 ? 'Above +' : 'Below '}${formatPrice(Math.abs(dMid), state.symbol)} (${((dMid / orb.mid) * 100).toFixed(2)}%)`;
+
+      document.getElementById('mOrbLow').textContent = formatPrice(orb.low, state.symbol);
+      document.getElementById('mOrbLowSub').textContent =
+        `${dLow >= 0 ? 'Above +' : 'Below '}${formatPrice(Math.abs(dLow), state.symbol)} (${((dLow / orb.low) * 100).toFixed(2)}%)`;
+
+      const statusEl = document.getElementById('mOrbStatus');
+      if (price > orb.high) {
+        statusEl.textContent = 'BREAKOUT ABOVE ORB HIGH';
+        statusEl.className = 'value bull-text';
+      } else if (price < orb.low) {
+        statusEl.textContent = 'BREAKDOWN BELOW ORB LOW';
+        statusEl.className = 'value bear-text';
+      } else if (price >= orb.mid) {
+        statusEl.textContent = 'INSIDE UPPER ORB (ABOVE MID)';
+        statusEl.className = 'value bull-text';
+      } else {
+        statusEl.textContent = 'INSIDE LOWER ORB (BELOW MID)';
+        statusEl.className = 'value warn-text';
+      }
+
+      const orbPct = orb.mid > 0 ? ((orb.width / orb.mid) * 100).toFixed(2) : '0.00';
+      document.getElementById('mOrbWidthSub').textContent =
+        `Range: ${formatPrice(orb.width, state.symbol)} (${orbPct}%)`;
+    }
+  }
+
+  function renderChart(candles, ind, orb) {
+    const canvas = document.getElementById('priceCanvas');
+    if (!canvas || !Array.isArray(candles) || candles.length === 0) return;
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    const width = Math.max(280, Math.floor(rect.width || canvas.parentElement.clientWidth || 640));
+    const height = 360;
+    if (canvas.width !== width * dpr || canvas.height !== height * dpr) {
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+    }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, width, height);
+
+    const padLeft = 10;
+    const padRight = 76;
+    const padTop = 14;
+    const padBottom = 24;
+    const volHeight = 52;
+    const plotW = width - padLeft - padRight;
+    const plotH = height - padTop - padBottom - volHeight;
+
+    const total = candles.length;
+    const count = Math.min(total, Math.max(20, state.visibleCandles));
+    const startIdx = total - count;
+    const slice = candles.slice(startIdx);
+    const displayBars = state.chartMode === 'ha' ? toHeikinAshi(slice) : slice;
+
+    let minP = Infinity;
+    let maxP = -Infinity;
+    let maxV = 0;
+
+    for (let i = 0; i < displayBars.length; i++) {
+      minP = Math.min(minP, displayBars[i].l);
+      maxP = Math.max(maxP, displayBars[i].h);
+      maxV = Math.max(maxV, slice[i].v || 0);
+    }
+
+    const lineKeys = ['wma12', 'wma144', 'ema20', 'ema50', 'ema200', 'vwap'];
+    for (const k of lineKeys) {
+      if (!state.showInd[k] || !ind[k]) continue;
+      for (let i = startIdx; i < total; i++) {
+        const val = ind[k][i];
+        if (Number.isFinite(val)) {
+          minP = Math.min(minP, val);
+          maxP = Math.max(maxP, val);
+        }
+      }
+    }
+
+    if (state.showInd.orb1h && orb) {
+      const span = Math.max(1e-6, maxP - minP);
+      if (orb.high <= maxP + span * 2.5 && orb.low >= minP - span * 2.5) {
+        minP = Math.min(minP, orb.low);
+        maxP = Math.max(maxP, orb.high);
+      }
+    }
+
+    if (!Number.isFinite(minP) || !Number.isFinite(maxP) || maxP <= minP) {
+      minP = slice[slice.length - 1].c * 0.99;
+      maxP = slice[slice.length - 1].c * 1.01;
+    }
+
+    const padRange = (maxP - minP) * 0.06;
+    minP -= padRange;
+    maxP += padRange;
+
+    const priceToY = (p) => padTop + ((maxP - p) / (maxP - minP)) * plotH;
+
+    // Grid & Price Axis
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 1;
+    ctx.font = '11px Inter, sans-serif';
+    ctx.fillStyle = '#475569';
+    ctx.textAlign = 'left';
+
+    const gridSteps = 5;
+    for (let g = 0; g <= gridSteps; g++) {
+      const ratio = g / gridSteps;
+      const y = padTop + ratio * plotH;
+      const pVal = maxP - ratio * (maxP - minP);
+      ctx.beginPath();
+      ctx.moveTo(padLeft, y);
+      ctx.lineTo(width - padRight, y);
+      ctx.stroke();
+      ctx.fillText(formatPrice(pVal, state.symbol), width - padRight + 6, y + 4);
+    }
+
+    // 1h ORB High / Mid / Low lines
+    if (state.showInd.orb1h && orb) {
+      const orbLevels = [
+        { label: 'ORB H', val: orb.high, color: '#f97316' },
+        { label: 'ORB M', val: orb.mid,  color: '#eab308' },
+        { label: 'ORB L', val: orb.low,  color: '#ec4899' }
+      ];
+      ctx.save();
+      ctx.setLineDash([5, 4]);
+      ctx.lineWidth = 1.5;
+      ctx.font = 'bold 10px Inter, sans-serif';
+      for (const lv of orbLevels) {
+        const y = Math.max(padTop + 6, Math.min(padTop + plotH - 6, priceToY(lv.val)));
+        ctx.strokeStyle = lv.color;
+        ctx.beginPath();
+        ctx.moveTo(padLeft, y);
+        ctx.lineTo(width - padRight, y);
+        ctx.stroke();
+
+        const tag = `${lv.label} ${formatPrice(lv.val, state.symbol)}`;
+        const tw = ctx.measureText(tag).width + 8;
+        ctx.fillStyle = lv.color;
+        ctx.fillRect(padLeft + 4, y - 9, tw, 16);
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'left';
+        ctx.fillText(tag, padLeft + 8, y + 3);
+      }
+      ctx.restore();
+    }
+
+    // Volume bars + 20-bar simple moving average (SMA20).
+    // The MA uses the actual candle volumes, not spot-price or fallback data.
+    const stepX = plotW / count;
+    const barW = Math.max(2, stepX * 0.64);
+    const volTop = padTop + plotH + 6;
+    const volPlotH = volHeight - 8;
+    const volumeSma20 = slice.map((_, i) => {
+      const end = startIdx + i;
+      if (end < 19) return null;
+      let sum = 0;
+      for (let j = end - 19; j <= end; j++) sum += Number(candles[j].v) || 0;
+      return sum / 20;
+    });
+    const maxVolScale = Math.max(maxV, ...volumeSma20.filter(Number.isFinite), 1);
+    for (let i = 0; i < count; i++) {
+      const bar = displayBars[i];
+      const v = slice[i].v || 0;
+      const vh = maxVolScale > 0 ? (v / maxVolScale) * volPlotH : 0;
+      const x = padLeft + i * stepX + (stepX - barW) / 2;
+      ctx.fillStyle = bar.c >= bar.o ? 'rgba(0, 0, 255, 0.28)' : 'rgba(255, 0, 0, 0.28)';
+      ctx.fillRect(x, volTop + (volPlotH - vh), barW, vh);
+    }
+    // SMA20 overlay in amber so it remains distinguishable from volume bars.
+    ctx.save();
+    ctx.strokeStyle = '#f59e0b';
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    let started = false;
+    for (let i = 0; i < count; i++) {
+      const ma = volumeSma20[i];
+      if (!Number.isFinite(ma)) continue;
+      const x = padLeft + i * stepX + stepX / 2;
+      const y = volTop + volPlotH - (ma / maxVolScale) * volPlotH;
+      if (!started) { ctx.moveTo(x, y); started = true; }
+      else ctx.lineTo(x, y);
+    }
+    if (started) ctx.stroke();
+    ctx.fillStyle = '#b45309';
+    ctx.font = '10px Inter, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('VOL · SMA 20', padLeft + 4, volTop + 10);
+    ctx.restore();
+
+    // Candlesticks
+    for (let i = 0; i < count; i++) {
+      const bar = displayBars[i];
+      const cx = padLeft + i * stepX + stepX / 2;
+      const isUp = bar.c >= bar.o;
+      const color = isUp ? '#0000FF' : '#FF0000';
+      const yHigh = priceToY(bar.h);
+      const yLow = priceToY(bar.l);
+      const yOpen = priceToY(bar.o);
+      const yClose = priceToY(bar.c);
+
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(cx, yHigh);
+      ctx.lineTo(cx, yLow);
+      ctx.stroke();
+
+      const bodyTop = Math.min(yOpen, yClose);
+      const bodyH = Math.max(1.5, Math.abs(yClose - yOpen));
+      ctx.fillStyle = color;
+      ctx.fillRect(cx - barW / 2, bodyTop, barW, bodyH);
+    }
+
+    // Moving Averages & VWAP
+    const lineMeta = [
+      { key: 'wma12',  name: '12W',  color: LINE_COLORS.wma12 },
+      { key: 'wma144', name: '144W', color: LINE_COLORS.wma144 },
+      { key: 'ema20',  name: '20E',  color: LINE_COLORS.ema20 },
+      { key: 'ema50',  name: '50E',  color: LINE_COLORS.ema50 },
+      { key: 'ema200', name: '200E', color: LINE_COLORS.ema200 },
+      { key: 'vwap',   name: 'VWAP', color: LINE_COLORS.vwap }
+    ];
+
+    ctx.lineWidth = 1.7;
+    ctx.font = 'bold 10px Inter, sans-serif';
+    for (const m of lineMeta) {
+      if (!state.showInd[m.key] || !ind[m.key]) continue;
+      ctx.strokeStyle = m.color;
+      ctx.beginPath();
+      let started = false;
+      let lastVal = null;
+      let lastX = null;
+      let lastY = null;
+      for (let i = 0; i < count; i++) {
+        const val = ind[m.key][startIdx + i];
+        if (!Number.isFinite(val)) continue;
+        const x = padLeft + i * stepX + stepX / 2;
+        const y = priceToY(val);
+        if (!started) {
+          ctx.moveTo(x, y);
+          started = true;
+        } else {
+          ctx.lineTo(x, y);
+        }
+        lastVal = val;
+        lastX = x;
+        lastY = y;
+      }
+      ctx.stroke();
+
+      if (Number.isFinite(lastVal) && lastY !== null) {
+        const labelTxt = `${m.name} ${formatPrice(lastVal, state.symbol)}`;
+        const lw = ctx.measureText(labelTxt).width + 6;
+        const lx = Math.max(padLeft + 2, Math.min(width - padRight - lw - 2, lastX - lw - 4));
+        const ly = Math.max(padTop + 10, Math.min(padTop + plotH - 4, lastY - 3));
+        ctx.fillStyle = 'rgba(255,255,255,0.88)';
+        ctx.fillRect(lx - 2, ly - 9, lw, 12);
+        ctx.fillStyle = m.color === '#00FFFF' ? '#0284c7' : m.color;
+        ctx.fillText(labelTxt, lx + 1, ly);
+      }
+    }
+
+    // Hover Crosshair
+    if (state.hoverIndex !== null && state.hoverIndex >= 0 && state.hoverIndex < count) {
+      const idx = state.hoverIndex;
+      const globalIdx = startIdx + idx;
+      const bar = displayBars[idx];
+      const cx = padLeft + idx * stepX + stepX / 2;
+      ctx.save();
+      ctx.strokeStyle = 'rgba(15, 23, 42, 0.35)';
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath();
+      ctx.moveTo(cx, padTop);
+      ctx.lineTo(cx, padTop + plotH + volHeight);
+      ctx.stroke();
+      ctx.restore();
+
+      const dt = new Date(slice[idx].t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const readoutEl = document.getElementById('chartReadout');
+      if (readoutEl) {
+        readoutEl.textContent =
+          `${dt} | O:${formatPrice(bar.o, state.symbol)} H:${formatPrice(bar.h, state.symbol)} L:${formatPrice(bar.l, state.symbol)} C:${formatPrice(bar.c, state.symbol)} | Vol:${formatVol(slice[idx].v)} | ` +
+          `20E:${formatPrice(ind.ema20[globalIdx], state.symbol)} 50E:${formatPrice(ind.ema50[globalIdx], state.symbol)} VWAP:${formatPrice(ind.vwap[globalIdx], state.symbol)}`;
+      }
+    }
+  }
+
+  function renderAll() {
+    const candles = ensureSeries(state.symbol, state.tf);
+    const ind = computeIndicators(candles);
+    const atrInfo = getAnchorATRs(state.symbol, state.tf, candles);
+    const mtfTrend = getClosed15mTrend(state.symbol);
+    const orb = calc1hORB(state.symbol, state.tf, candles);
+
+    const i = candles.length - 1;
+    const last = candles[i];
+    const prev = candles[Math.max(0, i - 1)];
+    const price = last.c;
+    const chg = price - prev.c;
+    const chgPct = prev.c > 0 ? (chg / prev.c) * 100 : 0;
+
+    document.getElementById('chartTitle').textContent = `${state.symbol} · ${TF_CONFIG[state.tf].label} Chart (${state.chartMode === 'ha' ? 'Heikin Ashi' : 'Candlestick'})`;
+    const feedDot = document.getElementById('feedDot');
+    const isDeltaLive = state.deltaCandleKeys[getSeriesKey(state.symbol, state.tf)] === true;
+    if (feedDot) feedDot.className = `status-dot ${isDeltaLive ? 'live' : (state.lastDataSource.includes('Fallback') ? 'offline' : 'demo')}`;
+    document.getElementById('statusText').textContent = `Feed: ${isDeltaLive ? 'Verified Delta Exchange candles' : state.lastDataSource + ' — alerts disabled until Delta candles connect'} · Updated ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
+    const warning = document.getElementById('dataWarning');
+    if (warning) {
+      warning.classList.toggle('show', !isDeltaLive);
+      warning.textContent = isDeltaLive
+        ? 'Delta Exchange candle feed connected. Signals are evaluated only after candle close. Confirm the symbol/contract on Delta Exchange before placing any manual trade.'
+        : 'DEMO / FALLBACK DATA — verified Delta Exchange candles are not connected for this symbol and timeframe. No trading alerts are generated from sample or fallback candles.';
+    }
+
+    const e20 = ind.ema20[i];
+    const e50 = ind.ema50[i];
+    const e200 = ind.ema200[i];
+    const biasEl = document.getElementById('biasText');
+    if (Number.isFinite(e20) && Number.isFinite(e50) && price > e20 && e20 > e50) {
+      biasEl.textContent = 'Bias: Bullish (Price > 20E > 50E)';
+      biasEl.className = 'bull-text';
+    } else if (Number.isFinite(e20) && Number.isFinite(e50) && price < e20 && e20 < e50) {
+      biasEl.textContent = 'Bias: Bearish (Price < 20E < 50E)';
+      biasEl.className = 'bear-text';
+    } else {
+      biasEl.textContent = 'Bias: Mixed / Transition';
+      biasEl.className = 'warn-text';
+    }
+
+    document.getElementById('mPrice').textContent = formatPrice(price, state.symbol);
+    const mChgEl = document.getElementById('mChange');
+    mChgEl.textContent = `${chg >= 0 ? '+' : ''}${formatPrice(chg, state.symbol)} (${chgPct >= 0 ? '+' : ''}${chgPct.toFixed(2)}%)`;
+    mChgEl.className = `sub ${chg >= 0 ? 'bull-text' : 'bear-text'}`;
+
+    document.getElementById('mAtr1h').textContent = formatPrice(atrInfo.atr1h, state.symbol);
+    document.getElementById('mAtr1hPct').textContent = `${price > 0 ? ((atrInfo.atr1h / price) * 100).toFixed(2) : '0.00'}% of price`;
+    document.getElementById('mAtr4h').textContent = formatPrice(atrInfo.atr4h, state.symbol);
+    document.getElementById('mAtr4hPct').textContent = `${price > 0 ? ((atrInfo.atr4h / price) * 100).toFixed(2) : '0.00'}% of price`;
+
+    const recentVols = candles.slice(-21, -1).map(x => x.v || 0);
+    const avgVol = recentVols.length ? recentVols.reduce((a, b) => a + b, 0) / recentVols.length : 1;
+    const volRatio = avgVol > 0 ? (last.v || 0) / avgVol : 1;
+    document.getElementById('mVolume').textContent = formatVol(last.v);
+    document.getElementById('mVolumeAvg').textContent = `SMA 20: ${formatVol(avgVol)} · ${volRatio.toFixed(2)}x average`;
+
+    const rsiNow = ind.rsi14[i], adxNow = ind.adx14[i];
+    const rsiEl = document.getElementById('mRsi14');
+    rsiEl.textContent = Number.isFinite(rsiNow) ? rsiNow.toFixed(1) : '—';
+    document.getElementById('mRsiStatus').textContent = Number.isFinite(rsiNow) ? (rsiNow > 70 ? 'Overbought zone' : rsiNow < 30 ? 'Oversold zone' : rsiNow > 50 ? 'Bullish momentum' : rsiNow < 50 ? 'Bearish momentum' : 'Neutral momentum') : 'Warming up…';
+    rsiEl.className = `value ${Number.isFinite(rsiNow) && rsiNow > 50 ? 'bull-text' : Number.isFinite(rsiNow) && rsiNow < 50 ? 'bear-text' : 'warn-text'}`;
+    const adxEl = document.getElementById('mAdx14');
+    adxEl.textContent = Number.isFinite(adxNow) ? adxNow.toFixed(1) : '—';
+    document.getElementById('mAdxStatus').textContent = Number.isFinite(adxNow) ? (adxNow >= 25 ? 'Strong trend' : adxNow >= 20 ? 'Trend developing' : 'Weak / sideways') : 'Warming up…';
+    adxEl.className = `value ${Number.isFinite(adxNow) && adxNow >= 20 ? 'bull-text' : 'warn-text'}`;
+    const mtfEl = document.getElementById('m15mTrend');
+    mtfEl.textContent = mtfTrend.direction;
+    mtfEl.className = `value ${mtfTrend.direction === 'BULLISH' ? 'bull-text' : mtfTrend.direction === 'BEARISH' ? 'bear-text' : 'warn-text'}`;
+    document.getElementById('m15mTrendSub').textContent = mtfTrend.label;
+
+    // Candle High / Low & Both-Sided 20/50/200 EMA
+    document.getElementById('mHighLowPts').textContent = `${formatPrice(last.h, state.symbol)} / ${formatPrice(last.l, state.symbol)}`;
+    document.getElementById('mHighLowSpread').textContent = `Spread: ${formatPrice(last.h - last.l, state.symbol)}`;
+
+    function setTwoSidedEma(valElId, subElId, emaVal) {
+      const valEl = document.getElementById(valElId);
+      const subEl = document.getElementById(subElId);
+      if (!Number.isFinite(emaVal)) {
+        valEl.textContent = '—';
+        subEl.textContent = 'Warming up…';
+        return;
+      }
+      const diff = price - emaVal;
+      const pct = emaVal > 0 ? (diff / emaVal) * 100 : 0;
+      valEl.textContent = formatPrice(emaVal, state.symbol);
+      subEl.textContent = diff >= 0
+        ? `Above +${formatPrice(diff, state.symbol)} (+${pct.toFixed(2)}%) · Below -${formatPrice(diff, state.symbol)}`
+        : `Below ${formatPrice(diff, state.symbol)} (${pct.toFixed(2)}%) · Above +${formatPrice(Math.abs(diff), state.symbol)}`;
+    }
+
+    setTwoSidedEma('mEma20Pts', 'mEma20PtsSub', e20);
+    setTwoSidedEma('mEma50Pts', 'mEma50PtsSub', e50);
+    setTwoSidedEma('mEma200Pts', 'mEma200PtsSub', e200);
+
+    // Bottom MA & VWAP Cards
+    const bottomItems = [
+      { id: 'mWma12',  sub: 'mWma12Diff',  val: ind.wma12[i] },
+      { id: 'mWma144', sub: 'mWma144Diff', val: ind.wma144[i] },
+      { id: 'mEma20',  sub: 'mEma20Diff',  val: e20 },
+      { id: 'mEma50',  sub: 'mEma50Diff',  val: e50 },
+      { id: 'mEma200', sub: 'mEma200Diff', val: e200 },
+      { id: 'mVwap',   sub: 'mVwapDiff',   val: ind.vwap[i] }
+    ];
+    for (const item of bottomItems) {
+      const el = document.getElementById(item.id);
+      const subEl = document.getElementById(item.sub);
+      if (!Number.isFinite(item.val)) {
+        el.textContent = '—';
+        subEl.textContent = 'Warming up…';
+        continue;
+      }
+      const d = price - item.val;
+      const p = item.val > 0 ? (d / item.val) * 100 : 0;
+      el.textContent = formatPrice(item.val, state.symbol);
+      subEl.textContent = `${d >= 0 ? 'Price +' : 'Price '}${formatPrice(d, state.symbol)} (${p >= 0 ? '+' : ''}${p.toFixed(2)}%)`;
+    }
+
+    // Approximate Price Range Card
+    document.getElementById('rangeTfLabel').textContent = TF_CONFIG[state.tf].label;
+    document.getElementById('rangeAtrTf').textContent = `TF ATR(14): ${formatPrice(atrInfo.tfAtr, state.symbol)}`;
+    document.getElementById('rangeAtr1h').textContent = `1h ATR(14): ${formatPrice(atrInfo.atr1h, state.symbol)}`;
+    document.getElementById('rangeAtr4h').textContent = `4h ATR(14): ${formatPrice(atrInfo.atr4h, state.symbol)}`;
+
+    const halfRange = (atrInfo.tfAtr || atrInfo.atr1h || price * 0.005);
+    const estLow = price - halfRange;
+    const estHigh = price + halfRange;
+    document.getElementById('estLow').textContent = formatPrice(estLow, state.symbol);
+    document.getElementById('estLowDist').textContent = `-${formatPrice(halfRange, state.symbol)} (-${((halfRange / price) * 100).toFixed(2)}%)`;
+    document.getElementById('estHigh').textContent = formatPrice(estHigh, state.symbol);
+    document.getElementById('estHighDist').textContent = `+${formatPrice(halfRange, state.symbol)} (+${((halfRange / price) * 100).toFixed(2)}%)`;
+    document.getElementById('estWidth').textContent = formatPrice(halfRange * 2, state.symbol);
+    document.getElementById('estBiasNote').textContent = `1h ATR: ${formatPrice(atrInfo.atr1h, state.symbol)} · 4h ATR: ${formatPrice(atrInfo.atr4h, state.symbol)}`;
+
+    const mtfPills = document.getElementById('mtfRangePills');
+    mtfPills.innerHTML = ['5m', '15m', '1h', '4h', '1d'].map(tfKey => {
+      const s = ensureSeries(state.symbol, tfKey);
+      const a = calcATR(s, 14);
+      return `<div class="mtf-pill"><strong>${TF_CONFIG[tfKey].label}:</strong> ${formatPrice(price - a, state.symbol)} – ${formatPrice(price + a, state.symbol)} <span style="color:var(--muted);">(ATR ${formatPrice(a, state.symbol)})</span></div>`;
+    }).join('');
+
+    renderOrbMetrics(candles, orb);
+    updateTradePlan(candles, ind, atrInfo, mtfTrend);
+    renderChart(candles, ind, orb);
+    evaluateCrossoversAndSignals(state.symbol, state.tf, candles, ind, atrInfo, orb);
+  }
+
+  async function fetchLiveCandles(sym, tf) {
+    const tfSecMap = {
+      '1m': 60, '5m': 300, '15m': 900, '30m': 1800, '1h': 3600,
+      '2h': 7200, '3h': 10800, '4h': 14400, '1d': 86400,
+      '1w': 604800, '1M': 2592000
+    };
+    const key = getSeriesKey(sym, tf);
+    const resSec = tfSecMap[tf] || 300;
+    const nowSec = Math.floor(Date.now() / 1000);
+    const startSec = nowSec - resSec * 245;
+    const deltaEndpoints = [
+      `https://api.india.delta.exchange/v2/history/candles?symbol=${sym}&resolution=${tf}&start=${startSec}&end=${nowSec}`,
+      `https://api.delta.exchange/v2/history/candles?symbol=${sym}&resolution=${tf}&start=${startSec}&end=${nowSec}`,
+      `https://corsproxy.io/?${encodeURIComponent(`https://api.india.delta.exchange/v2/history/candles?symbol=${sym}&resolution=${tf}&start=${startSec}&end=${nowSec}`)}`
+    ];
+
+    for (const url of deltaEndpoints) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000);
+      try {
+        const resp = await fetch(url, { cache: 'no-store', signal: controller.signal });
+        if (!resp.ok) continue;
+        const payload = await resp.json();
+        const rows = Array.isArray(payload) ? payload : (payload && Array.isArray(payload.result) ? payload.result : null);
+        if (!Array.isArray(rows) || rows.length < 20) continue;
+        const parsed = rows.map(r => {
+          const rawT = Number(r.time ?? r.t ?? 0);
+          const tMs = rawT > 1e12 ? rawT : rawT * 1000;
+          const o = Number(r.open ?? r.o), h = Number(r.high ?? r.h);
+          const l = Number(r.low ?? r.l), c = Number(r.close ?? r.c);
+          const v = Number(r.volume ?? r.v ?? 0);
+          return { t: tMs, o, h, l, c, v };
+        }).filter(c => Number.isFinite(c.t) && c.t > 0 &&
+          [c.o, c.h, c.l, c.c, c.v].every(Number.isFinite) &&
+          c.o > 0 && c.h > 0 && c.l > 0 && c.c > 0 && c.v >= 0 &&
+          c.h >= Math.max(c.o, c.c, c.l) && c.l <= Math.min(c.o, c.c, c.h));
+        parsed.sort((a, b) => a.t - b.t);
+        const unique = parsed.filter((c, i) => i === 0 || c.t !== parsed[i - 1].t);
+        if (unique.length >= 20) {
+          state.candlesByKey[key] = unique;
+          state.deltaCandleKeys[key] = true;
+          state.lastDataSuccess[key] = Date.now();
+          state.lastDataSource = url.includes('api.india.delta.exchange') ? 'Delta Exchange India' : 'Delta Exchange';
+          if (sym === state.symbol) renderAll();
+          return true;
+        }
+      } catch (_) {
+        // Try the next Delta endpoint; failures are surfaced by the feed status.
+      } finally { clearTimeout(timeout); }
+    }
+
+    // Non-Delta data may be displayed for reference, but is never eligible for alerts.
+    const binanceMap = { BTCUSD: 'BTCUSDT', ETHUSD: 'ETHUSDT', SOLUSD: 'SOLUSDT', XRPUSD: 'XRPUSDT' };
+    const intervalMap = { '1m': '1m', '5m': '5m', '15m': '15m', '30m': '30m', '1h': '1h', '2h': '2h', '4h': '4h', '1d': '1d', '1w': '1w', '1M': '1M' };
+    const pair = binanceMap[sym], interval = intervalMap[tf];
+    if (pair && interval) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000);
+      try {
+        const resp = await fetch(`https://api.binance.com/api/v3/klines?symbol=${pair}&interval=${interval}&limit=240`, { cache: 'no-store', signal: controller.signal });
+        if (resp.ok) {
+          const rows = await resp.json();
+          if (Array.isArray(rows) && rows.length >= 30) {
+            const parsed = rows.map(r => ({ t:Number(r[0]), o:Number(r[1]), h:Number(r[2]), l:Number(r[3]), c:Number(r[4]), v:Number(r[5]) }))
+              .filter(c => Number.isFinite(c.t) && [c.o,c.h,c.l,c.c,c.v].every(Number.isFinite) && c.o>0 && c.h>=Math.max(c.o,c.c,c.l) && c.l<=Math.min(c.o,c.c) && c.v>=0);
+            if (parsed.length >= 30) {
+              state.candlesByKey[key] = parsed;
+              state.deltaCandleKeys[key] = false;
+              state.lastDataSource = 'Fallback Feed (Binance) — alerts disabled';
+              if (sym === state.symbol) renderAll();
+              return false;
+            }
+          }
+        }
+      } catch (_) {
+      } finally { clearTimeout(timeout); }
+    }
+    // Do not continue presenting an old Delta feed as live after repeated failures.
+    if (state.lastDataSuccess[key] && Date.now() - state.lastDataSuccess[key] > 90000) {
+      state.deltaCandleKeys[key] = false;
+    }
+    return false;
+  }
+
+  function applyLiveSpotPrice(sym, spotPrice, sourceLabel) {
+    if (!Number.isFinite(spotPrice) || spotPrice <= 0) return;
+    // Keep ticker prices separate: spot/mark prices must never alter historical OHLC candles.
+    state.spotPricesBySymbol[sym] = { price: spotPrice, source: sourceLabel || 'Ticker', at: Date.now() };
+  }
+
+  async function fetchLiveSpotPrices() {
+    const targetSyms = state.monitorAll ? SYMBOLS : [state.symbol];
+    for (const sym of targetSyms) {
+      for (const host of ['https://api.india.delta.exchange', 'https://api.delta.exchange']) {
+        try {
+          const resp = await fetch(`${host}/v2/tickers/${sym}`, { cache: 'no-store', signal: AbortSignal.timeout(7000) });
+          if (!resp.ok) continue;
+          const payload = await resp.json();
+          const r = payload && payload.result ? payload.result : payload;
+          const price = Number(r && (r.mark_price ?? r.spot_price ?? r.close ?? r.last_price));
+          if (Number.isFinite(price) && price > 0) {
+            applyLiveSpotPrice(sym, price, host.includes('india.') ? 'Delta India ticker' : 'Delta ticker');
+            break;
+          }
+        } catch (_) {}
+      }
+    }
+  }
+
+  async function refreshAllLiveData() {
+    if (state.refreshInProgress) return;
+    state.refreshInProgress = true;
+    try {
+      const targets = state.monitorAll ? SYMBOLS : [state.symbol];
+      for (const sym of targets) {
+        await fetchLiveCandles(sym, state.tf);
+        if (state.tf !== '1h') await fetchLiveCandles(sym, '1h');
+        if (state.tf !== '4h') await fetchLiveCandles(sym, '4h');
+        if (state.tf !== '15m') await fetchLiveCandles(sym, '15m');
+      }
+      for (const sym of targets) {
+        const key = getSeriesKey(sym, state.tf);
+        const candles = ensureSeries(sym, state.tf);
+        if (state.deltaCandleKeys[key] !== true) continue;
+        const ind = computeIndicators(candles);
+        const atrInfo = getAnchorATRs(sym, state.tf, candles);
+        const orb = calc1hORB(sym, state.tf, candles);
+        evaluateCrossoversAndSignals(sym, state.tf, candles, ind, atrInfo, orb);
+      }
+      renderAll();
+    } finally { state.refreshInProgress = false; }
+  }
+
+  // Event Listeners
+  const symSelect = document.getElementById('symbolSelect');
+  symSelect.value = state.symbol;
+  symSelect.addEventListener('change', (e) => {
+    state.symbol = e.target.value;
+    storageSet('delta_mon_sym', state.symbol);
+    ensureSeries(state.symbol, state.tf);
+    ensureSeries(state.symbol, '1h');
+    ensureSeries(state.symbol, '4h');
+    renderAll();
+    refreshAllLiveData();
+  });
+
+  document.querySelectorAll('.tf-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      state.tf = btn.dataset.tf;
+      ensureSeries(state.symbol, state.tf);
+      renderAll();
+      refreshAllLiveData();
+    });
+  });
+
+  document.querySelectorAll('.ind-pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      const key = pill.dataset.ind;
+      state.showInd[key] = !state.showInd[key];
+      pill.classList.toggle('active', state.showInd[key]);
+      renderAll();
+    });
+  });
+
+  document.getElementById('modeCandleBtn').addEventListener('click', () => {
+    state.chartMode = 'candle';
+    document.getElementById('modeCandleBtn').classList.add('active');
+    document.getElementById('modeHaBtn').classList.remove('active');
+    renderAll();
+  });
+
+  document.getElementById('modeHaBtn').addEventListener('click', () => {
+    state.chartMode = 'ha';
+    document.getElementById('modeHaBtn').classList.add('active');
+    document.getElementById('modeCandleBtn').classList.remove('active');
+    renderAll();
+  });
+
+  document.getElementById('zoomInBtn').addEventListener('click', () => {
+    state.visibleCandles = Math.max(20, state.visibleCandles - 15);
+    storageSet('delta_mon_vcandles', state.visibleCandles);
+    renderAll();
+  });
+
+  document.getElementById('zoomOutBtn').addEventListener('click', () => {
+    state.visibleCandles = Math.min(240, state.visibleCandles + 15);
+    storageSet('delta_mon_vcandles', state.visibleCandles);
+    renderAll();
+  });
+
+  document.getElementById('soundToggleBtn').addEventListener('click', (e) => {
+    state.soundOn = !state.soundOn;
+    storageSet('delta_mon_sound', state.soundOn);
+    e.target.textContent = state.soundOn ? 'Sound ON' : 'Sound OFF';
+    e.target.classList.toggle('active', state.soundOn);
+  });
+
+  document.getElementById('entryExitToggleBtn').addEventListener('click', (e) => {
+    state.entryExitAlertsOn = !state.entryExitAlertsOn;
+    storageSet('delta_mon_ee_alerts', state.entryExitAlertsOn);
+    e.target.textContent = state.entryExitAlertsOn ? 'Entry/Exit Alerts ON' : 'Entry/Exit Alerts OFF';
+    e.target.classList.toggle('active', state.entryExitAlertsOn);
+  });
+
+  const volSel = document.getElementById('volThresholdSelect');
+  volSel.value = state.volThreshold.toFixed(1);
+  volSel.addEventListener('change', (e) => {
+    state.volThreshold = Number(e.target.value) || 1.0;
+    storageSet('delta_mon_vol_thresh', state.volThreshold);
+    renderAll();
+  });
+
+  document.getElementById('monitorAllBtn').addEventListener('click', (e) => {
+    state.monitorAll = !state.monitorAll;
+    storageSet('delta_mon_all', state.monitorAll);
+    e.target.classList.toggle('active', state.monitorAll);
+    refreshAllLiveData();
+  });
+
+  document.getElementById('pauseAlertsBtn').addEventListener('click', (e) => {
+    state.alertsPaused = !state.alertsPaused;
+    e.target.textContent = state.alertsPaused ? 'Resume alerts' : 'Stop alerts';
+    e.target.classList.toggle('danger', state.alertsPaused);
+  });
+
+  document.getElementById('testSoundBtn').addEventListener('click', () => playAlertTone('bull'));
+  document.getElementById('testAlertBtn').addEventListener('click', () => {
+    triggerAlert(`TEST ALERT: ${state.symbol} (${state.tf}) RSI/ADX + 15m trend filters active`, 'bull');
+  });
+
+  document.getElementById('enablePhoneNotifyBtn').addEventListener('click', async () => {
+    if (!('Notification' in window)) { updatePhoneNotifyStatus(); return; }
+    try { const permission=await Notification.requestPermission(); updatePhoneNotifyStatus(); if(permission==='granted') new Notification('Delta alerts enabled',{body:'Phone notifications are ready while the app/browser is active.'}); }
+    catch (_) { document.getElementById('phoneNotifyStatus').textContent='Could not request permission. Use HTTPS in Chrome.'; }
+  });
+  document.getElementById('testTelegramBtn').addEventListener('click', async () => {
+    saveDeliverySettings();
+    try { await sendTelegramAlert('TEST ALERT — Telegram connection successful. No trade was placed.'); document.getElementById('telegramStatus').textContent='Test message sent successfully'; }
+    catch(e) { document.getElementById('telegramStatus').textContent='Error: '+e.message+' (check token, chat ID and browser network)'; }
+  });
+  document.getElementById('testEmailBtn').addEventListener('click', async () => {
+    saveDeliverySettings();
+    try { await sendEmailAlert('TEST ALERT — Email connection successful. No trade was placed.','test'); document.getElementById('emailStatus').textContent='Test email sent successfully'; }
+    catch(e) { document.getElementById('emailStatus').textContent='Error: '+e.message+' (check EmailJS settings/template)'; }
+  });
+  loadDeliverySettings();
+
+  document.getElementById('copyLinkBtn').addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      showBanner('App link copied to clipboard.', 'info');
+    } catch (_) {
+      showBanner('Copy URL from browser address bar.', 'info');
+    }
+  });
+
+  document.getElementById('browserGuideBtn').addEventListener('click', () => {
+    document.getElementById('browserGuide').classList.toggle('show');
+  });
+
+  document.getElementById('dismissBannerBtn').addEventListener('click', () => {
+    document.getElementById('alertBanner').classList.remove('show');
+  });
+
+  document.getElementById('clearHistoryBtn').addEventListener('click', () => {
+    state.history = [];
+    document.getElementById('historyList').innerHTML = '<div class="history-item"><span style="color:var(--muted);">No crossover alerts triggered yet.</span></div>';
+  });
+
+  // Canvas Hover / Touch Inspection
+  const canvasEl = document.getElementById('priceCanvas');
+  function handlePointerChart(clientX) {
+    const rect = canvasEl.getBoundingClientRect();
+    const padLeft = 10;
+    const padRight = 76;
+    const plotW = Math.max(1, rect.width - padLeft - padRight);
+    const relX = clientX - rect.left - padLeft;
+    const candles = ensureSeries(state.symbol, state.tf);
+    const count = Math.min(candles.length, Math.max(20, state.visibleCandles));
+    const idx = Math.max(0, Math.min(count - 1, Math.floor((relX / plotW) * count)));
+    state.hoverIndex = idx;
+    renderAll();
+  }
+
+  canvasEl.addEventListener('mousemove', (e) => handlePointerChart(e.clientX));
+  canvasEl.addEventListener('touchmove', (e) => {
+    if (e.touches && e.touches[0]) handlePointerChart(e.touches[0].clientX);
+  }, { passive: true });
+  canvasEl.addEventListener('mouseleave', () => {
+    state.hoverIndex = null;
+    renderAll();
+  });
+
+  window.addEventListener('resize', () => renderAll());
+
+  // PWA Install Prompt
+  setupDynamicManifest();
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    state.deferredInstallPrompt = e;
+    const btn = document.getElementById('installPwaBtn');
+    if (btn) btn.style.display = 'inline-block';
+  });
+  document.getElementById('installPwaBtn').addEventListener('click', async () => {
+    if (!state.deferredInstallPrompt) return;
+    state.deferredInstallPrompt.prompt();
+    await state.deferredInstallPrompt.userChoice;
+    state.deferredInstallPrompt = null;
+    document.getElementById('installPwaBtn').style.display = 'none';
+  });
+
+  // Bootstrap all series & start live polling
+  SYMBOLS.forEach(s => {
+    ensureSeries(s, state.tf);
+    ensureSeries(s, '1h');
+    ensureSeries(s, '4h');
+  });
+  renderAll();
+  refreshAllLiveData();
+  setInterval(refreshAllLiveData, 30000);
+})();
+</script>
+</body>
+</html>

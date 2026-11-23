@@ -3,6 +3,7 @@ name: BTC EMA 9 21 Test
 
 on:
   workflow_dispatch:
+
   schedule:
     - cron: '2-59/5 * * * *'
 
@@ -15,6 +16,7 @@ concurrency:
 
 jobs:
   ema-test:
+    name: BTC EMA 9 21 Signal Monitor
     runs-on: ubuntu-latest
     timeout-minutes: 4
 
@@ -27,5 +29,25 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Check EMA Test File
+        run: |
+          if [ ! -f btc-ema-test.js ]; then
+            echo "ERROR: btc-ema-test.js not found"
+            exit 1
+          fi
+
+      - name: Check Telegram Secrets
+        env:
+          BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          if [ -z "$BOT_TOKEN" ] || [ -z "$CHAT_ID" ]; then
+            echo "ERROR: Telegram secrets are missing"
+            exit 1
+          fi
+
       - name: Run BTC EMA 9 21 Test
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: node btc-ema-test.js

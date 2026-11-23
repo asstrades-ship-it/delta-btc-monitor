@@ -1,0 +1,34 @@
+
+name: BTC Background BUY SELL Monitor
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  btc-monitor:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Check Signal Engine
+        run: |
+          if [ ! -f btc-monitor.js ]; then
+            echo "Signal engine not installed yet."
+            exit 1
+          fi
+
+      - name: Run BTC Signal Monitor
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: node btc-monitor.js

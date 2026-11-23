@@ -1,0 +1,31 @@
+
+name: BTC EMA 9 21 Test
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '2-59/5 * * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: btc-ema-test
+  cancel-in-progress: false
+
+jobs:
+  ema-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Run BTC EMA 9 21 Test
+        run: node btc-ema-test.js

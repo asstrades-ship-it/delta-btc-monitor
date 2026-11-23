@@ -470,6 +470,7 @@
           <strong>Phone notification</strong>
           <p style="font-size:.78rem;color:var(--muted);margin:5px 0 9px;">Browser notification permission. App/browser must remain active; closed-app delivery is not guaranteed.</p>
           <button type="button" id="enablePhoneNotifyBtn">Enable phone notifications</button>
+          <button type="button" id="testPhoneNotifyBtn" style="margin-top:7px;">Test phone notification</button>
           <div id="phoneNotifyStatus" style="font-size:.75rem;color:var(--muted);margin-top:7px;">Permission not checked</div>
         </div>
         <div style="background:var(--panel-2);padding:12px;border-radius:10px;">
@@ -1254,8 +1255,16 @@
     else el.textContent='Permission: '+Notification.permission;
   }
   async function sendPhoneNotification(msg, type) {
-    if (!('Notification' in window) || Notification.permission !== 'granted') return;
-    try { new Notification('Delta Exchange alert', { body: msg, tag: 'delta-'+type+'-'+Date.now(), renotify: true }); } catch (_) {}
+    if (!('Notification' in window)) throw new Error('Notification API unavailable in this browser');
+    if (Notification.permission !== 'granted') throw new Error('Notification permission: '+Notification.permission);
+    if (!('serviceWorker' in navigator)) throw new Error('Service Worker unavailable');
+    const registration = await navigator.serviceWorker.register('./sw.js', { scope: './' });
+    await navigator.serviceWorker.ready;
+    if (typeof registration.showNotification !== 'function') throw new Error('Service Worker notification API unavailable');
+    await registration.showNotification('Delta Exchange alert', {
+      body: msg, icon: './icon-192.png', badge: './icon-192.png',
+      tag: 'delta-'+type+'-'+Date.now(), data: { url: './' }
+    });
   }
   async function sendTelegramAlert(msg) {
     const token=storageGet('delta_telegramBotToken'), chat=storageGet('delta_telegramChatId');
@@ -1270,7 +1279,7 @@
     if(!r.ok) throw new Error('EmailJS send failed ('+r.status+')');
   }
   function sendExternalAlerts(msg, type) {
-    sendPhoneNotification(msg,type);
+    sendPhoneNotification(msg,type).catch(e => { document.getElementById('phoneNotifyStatus').textContent = 'Notification error: '+e.message; });
     if (storageGet('delta_telegramBotToken') && storageGet('delta_telegramChatId')) sendTelegramAlert(msg).then(()=>{document.getElementById('telegramStatus').textContent='Last alert sent';}).catch(e=>{document.getElementById('telegramStatus').textContent='Send error: '+e.message;});
     if (storageGet('delta_emailTo') && storageGet('delta_emailServiceId') && storageGet('delta_emailTemplateId') && storageGet('delta_emailPublicKey')) sendEmailAlert(msg,type).then(()=>{document.getElementById('emailStatus').textContent='Last alert sent';}).catch(e=>{document.getElementById('emailStatus').textContent='Send error: '+e.message;});
   }
@@ -2137,9 +2146,23 @@
   });
 
   document.getElementById('enablePhoneNotifyBtn').addEventListener('click', async () => {
-    if (!('Notification' in window)) { updatePhoneNotifyStatus(); return; }
-    try { const permission=await Notification.requestPermission(); updatePhoneNotifyStatus(); if(permission==='granted') new Notification('Delta alerts enabled',{body:'Phone notifications are ready while the app/browser is active.'}); }
-    catch (_) { document.getElementById('phoneNotifyStatus').textContent='Could not request permission. Use HTTPS in Chrome.'; }
+    const status = document.getElementById('phoneNotifyStatus');
+    try {
+      if (!window.isSecureContext) throw new Error('Secure HTTPS context required');
+      if (!('Notification' in window)) throw new Error('Browser Notification API unavailable');
+      const permission = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission();
+      updatePhoneNotifyStatus();
+      if (permission !== 'granted') { status.textContent = 'Notification permission: '+permission; return; }
+      await sendPhoneNotification('Phone notifications enabled. This is a test, not a trade signal.', 'test');
+      status.textContent = 'Test notification sent to Android successfully';
+    } catch (e) { status.textContent = 'Notification error: '+e.message; }
+  });
+  document.getElementById('testPhoneNotifyBtn').addEventListener('click', async () => {
+    const status = document.getElementById('phoneNotifyStatus');
+    try {
+      await sendPhoneNotification('BTC Monitor test notification — no trade placed.', 'test');
+      status.textContent = 'Test notification sent to Android successfully';
+    } catch (e) { status.textContent = 'Notification error: '+e.message; }
   });
   document.getElementById('testTelegramBtn').addEventListener('click', async () => {
     saveDeliverySettings();

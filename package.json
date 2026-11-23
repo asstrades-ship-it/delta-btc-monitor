@@ -1,0 +1,13 @@
+
+{
+  "name": "delta-btc-monitor",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Delta BTC EMA 9/21 Telegram and Web Push Alerts",
+  "scripts": {
+    "generate-vapid": "web-push generate-vapid-keys"
+  },
+  "dependencies": {
+    "web-push": "^3.6.7"
+  }
+}

@@ -1,0 +1,89 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BTC EMA 9/21 Push Monitor</title>
+  <meta name="theme-color" content="#101a30">
+  <link rel="manifest" href="./manifest.json">
+  <style>
+    body {
+      background: #101a30;
+      color: white;
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    .card {
+      background: #1b2943;
+      border-radius: 14px;
+      padding: 20px;
+      margin-top: 20px;
+    }
+    button {
+      padding: 14px;
+      border: 0;
+      border-radius: 10px;
+      background: #35b7e8;
+      color: #071525;
+      font-weight: bold;
+    }
+    #status {
+      margin-top: 15px;
+      line-height: 1.6;
+      overflow-wrap: anywhere;
+    }
+  </style>
+</head>
+<body>
+  <h2>BTC EMA 9/21 Monitor</h2>
+  <p>Delta Exchange India | BTCUSD | 5 Minutes</p>
+
+  <div class="card">
+    <h3>Background Push Notifications</h3>
+    <p>BUY / SELL alerts only. No auto trading.</p>
+
+    <button id="enablePush">
+      Enable Background Push
+    </button>
+
+    <div id="status">
+      Status: Not subscribed
+    </div>
+  </div>
+
+  <script>
+    const statusBox = document.getElementById("status");
+
+    document.getElementById("enablePush")
+      .addEventListener("click", async () => {
+        try {
+          if (!("serviceWorker" in navigator) ||
+              !("PushManager" in window)) {
+            throw new Error("Push is not supported");
+          }
+
+          const permission =
+            await Notification.requestPermission();
+
+          if (permission !== "granted") {
+            throw new Error("Notification permission denied");
+          }
+
+          const registration =
+            await navigator.serviceWorker.register("./sw.js");
+
+          await navigator.serviceWorker.ready;
+
+          statusBox.textContent =
+            "Notification permission granted. " +
+            "Service Worker registered. " +
+            "Push subscription setup is the next step.";
+
+        } catch (error) {
+          statusBox.textContent = error.message;
+        }
+      });
+  </script>
+</body>
+</html>
